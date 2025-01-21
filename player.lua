@@ -1,5 +1,5 @@
 player = {
-
+    sprite = {1,2} --sprite number, player is 2 tiles high (adjust numbers to actual sprite position)
     --player stats
     mspeed = 1  --movement speed
     dmg = 1		--attack damage
