@@ -93,9 +93,12 @@ dsa = {
                 elseif value >= 6 and value < 8 then
                 col = 3 --colors[3]
                 else col = 4 end--colors[4]
-                mset(x,y,col + 120)
+                mset(x,y,col + 75)
             end
         end
     end
 }
---
+--usage init_grid cartridge:
+--dsa.init_grid()
+--dsa.create_map()
+--dsa.set_map()
