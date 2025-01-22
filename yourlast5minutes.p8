@@ -5,10 +5,10 @@ __lua__
 #include dsa.lua
 
 function _init()
-dsa.dsa:init_grid()
-dsa.ds:create_map()
-dsa.dsa:set_map()
-print(dsa.dsa:get_grid(0,0))
+dsa:init_grid()
+ds:create_map()
+dsa:set_map()
+print(dsa:get_grid(0,0))
 end 
 
 function _update()
