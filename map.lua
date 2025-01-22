@@ -1,6 +1,7 @@
 dsa = {
     m_size = 129
     roughness = flr(rnd(3)) -1
+    grid = {}
     function adjust_roughness(size)
         adj = 2
         chance = rnd()
@@ -11,7 +12,7 @@ dsa = {
         return adj
     end
     function init_grid()
-        grid = {}
+        
         for x = 1, m_size do
             local row = ""
             for y = 1, m_size do
