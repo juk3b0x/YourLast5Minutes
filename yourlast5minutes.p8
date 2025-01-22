@@ -2,13 +2,13 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
-#include map.lua
+#include dsa.lua
 
 function _init()
-map.dsa:init_grid()
-map.ds:create_map()
-map.dsa:set_map()
-print(map.dsa:get_grid(0,0))
+dsa.dsa:init_grid()
+dsa.ds:create_map()
+dsa.dsa:set_map()
+print(dsa.dsa:get_grid(0,0))
 end 
 
 function _update()
