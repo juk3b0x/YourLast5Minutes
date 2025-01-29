@@ -7,6 +7,9 @@ __lua__
 -------------Varaibles----------------
 ----------------Player-----------------
 Player = {
+    dmg = 10,
+    mspeed = 1,
+    hp = 100,
     posX = 0,
     posY = 0,
     dirX = 0,
@@ -23,7 +26,11 @@ Player = {
 
     update = function(self)
         move(self)
-    end
+    end,
+    --function attack()
+      --  shoot(self)
+        --dealDMG(self, Mob)
+    --end
 }
 -----------------Mob-------------------
 Mob = {}
@@ -47,9 +54,9 @@ function Mob:move()
     move(self)
 end
 
-function Mob:attack()
-    -- Attack logic (deal damage to player)
-end
+--function Mob:attack()
+    --dealDMG(self, Player)
+--end
 
 function Mob:die()
     -- Despawn object and sprite
@@ -73,6 +80,7 @@ end
 
 grid = {}
 mobs = {}
+projectiles = {}
 
 function _init()
     Player:init()
@@ -245,7 +253,7 @@ function MoveAndCollision(entity, moveX, moveY)
             get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
             entity.posX % 8 != 0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
-                entity.posX = entity.posX + moveX
+                entity.posX = entity.posX + moveX*entity.mspeed
         end
             pX = flr(entity.posX / 8)
     
@@ -254,7 +262,7 @@ function MoveAndCollision(entity, moveX, moveY)
             get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
             entity.posY % 8 !=  0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
-                entity.posY = entity.posY + moveY
+                entity.posY = entity.posY + moveY*entity.mspeed
         end
 end
 function move(entity)
@@ -262,10 +270,10 @@ function move(entity)
     entity.dirY = 0
     
     if entity == Player then
-    if btn(0) then
-        entity.sprite = 0
-        entity.dirX = -1
-    end
+        if btn(0) then
+            entity.sprite = 0
+            entity.dirX = -1
+        end
 
     if btn(1) then
         entity.sprite = 1
