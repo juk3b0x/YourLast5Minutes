@@ -80,7 +80,9 @@ function _init()
     init_grid()
     create_map()
     set_map()
-    add(mobs, Mob:new())
+    for i = 1, 10 do
+        add(mobs, Mob:new())
+    end
     print("before spawn")
     for mob in all(mobs) do
         mob:spawn()
