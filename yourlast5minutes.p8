@@ -147,6 +147,9 @@ function set_map()
 end
 
 function get_level(x, y)
+    if ((x+1) < 1 or (x+1) > (m_size-1) or (y+1) < 1 or (y+1) > ((m_size-1)/2)) then
+        return 0
+    end
     local value = get_grid(x + 1, y + 1) 
     if value < 2 then
         return 0 
