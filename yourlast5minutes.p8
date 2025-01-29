@@ -5,39 +5,48 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
+----------------Player-----------------
+Player = {
+    posX = 0,
+    posY = 0,
+    dirX = 0,
+    dirY = 0,
+    sprite = 0,
 
-playerPosX = 64
-playerPosY = 64
-playerDirX = 1
-playerDirY = 1
-playerSprite = flr(rnd(3))
+    init = function(self)
+        self.posX = 64
+        self.posY = 64
+        self.dirX = 1
+        self.dirY = 1
+        self.sprite = flr(rnd(3))
+    end,
+
+    update = function(self)
+        move(self)
+    end
+}
+
+
 grid = {}
-
-
-
-
-
-
-
-
+mobs = {}
 
 function _init()
-    drawPlayer()
-    camera(playerPosX, playerPosY)
+    Player:init()
+    camera(Player.posX, Player.posY)
     init_grid()
     create_map()
     set_map()
 end 
 
 function _update()
-    updatePlayer()
+    Player:update()
     _draw()
 end
 
 function _draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
-    drawPlayer()
+    draw(Player)
 end
 
 
@@ -164,75 +173,66 @@ function get_level(x, y)
     end
 end
 
-----------------Player-----------------
 
-function MoveAndCollision(moveX, moveY)
 
-    local pX = flr(playerPosX / 8)    
-    local pY = flr(playerPosY / 8)
+function MoveAndCollision(entity, moveX, moveY)
+
+    local pX = flr(entity.posX / 8)    
+    local pY = flr(entity.posY / 8)
     local gridX = pX + moveX
     local gridY = pY + moveY
 
-        if (playerPosX % 8 == 0 and 
+        if (entity.posX % 8 == 0 and 
             get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
             get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
-            playerPosX % 8 != 0 or
-            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
-                playerPosX = playerPosX + moveX
+            entity.posX % 8 != 0 or
+            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+                entity.posX = entity.posX + moveX
         end
-            pX = flr(playerPosX / 8)
+            pX = flr(entity.posX / 8)
     
-        if (playerPosY % 8 == 0 and 
+        if (entity.posY % 8 == 0 and 
             get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
             get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
-            playerPosY % 8 !=  0 or
-            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
-                playerPosY = playerPosY + moveY
+            entity.posY % 8 !=  0 or
+            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                entity.posY = entity.posY + moveY
         end
 end
-
-
-function movePlayer()
-    playerDirX = 0
-    playerDirY = 0
+function move(entity)
+    entity.dirX = 0
+    entity.dirY = 0
 
     if btn(0) then
-        playerSprite = 0
-        playerDirX = -1
+        entity.sprite = 0
+        entity.dirX = -1
     end
 
     if btn(1) then
-        playerSprite = 1
-        playerDirX = 1
+        entity.sprite = 1
+        entity.dirX = 1
     end
 
     if btn(2) then
-        playerSprite = 2
-        playerDirY = -1
+        entity.sprite = 2
+        entity.dirY = -1
     end
 
     if btn(3) then
-        playerSprite = 3
-        playerDirY = 1
+        entity.sprite = 3
+        entity.dirY = 1
     end
 
-    MoveAndCollision(playerDirX, playerDirY)
-    camera(playerPosX - 64, playerPosY - 64)
+    MoveAndCollision(entity, entity.dirX, entity.dirY)
+    if entity == Player then
+        camera(entity.posX - 64, entity.posY - 64)
+    end
 end
 
-
-function drawPlayer()
+function draw(entity)
     -- Zeichne den Spieler basierend auf der Blickrichtung
-    spr(playerSprite, playerPosX, playerPosY)
+    spr(entity.sprite, entity.posX, entity.posY)
 end
-
-function updatePlayer()
-    movePlayer()
-end
-
-
-
-
 ----------------Portal-----------------
 
 
