@@ -146,39 +146,77 @@ function set_map()
     end
 end
 
+function get_level(x, y)
+    local value = get_grid(x + 1, y + 1) 
+    if value < 2 then
+        return 0 
+    elseif value >= 2 and value < 4 then
+        return 1 
+    elseif value >= 4 and value < 6 then
+        return 2 
+    elseif value >= 6 and value < 8 then
+        return 3 
+    else
+        return 4 
+    end
+end
+
 ----------------Player-----------------
+
+function MoveAndCollision(moveX, moveY)
+
+    local pX = flr(playerPosX / 8)    
+    local pY = flr(playerPosY / 8)
+    local gridX = pX + moveX
+    local gridY = pY + moveY
+
+        if (playerPosX % 8 == 0 and 
+            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
+            get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
+            playerPosX % 8 != 0 or
+            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+                playerPosX = playerPosX + moveX
+        end
+            pX = flr(playerPosX / 8)
+    
+        if (playerPosY % 8 == 0 and 
+            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
+            get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
+            playerPosY % 8 !=  0 or
+            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                playerPosY = playerPosY + moveY
+        end
+end
 
 
 function movePlayer()
-    -- Richtung zurれもcksetzen, um die Blickrichtung zu bestimmen
     playerDirX = 0
     playerDirY = 0
 
-    if (btn(0)) then -- Links (Button 0 = Pfeil links)
+    if btn(0) then
+        playerSprite = 0
         playerDirX = -1
-        playerSprite = 0 -- Sprite-ID fれもr "nach links schauen"
-        playerPosX = playerPosX - 1
     end
 
-    if (btn(1)) then -- Rechts (Button 1 = Pfeil rechts)
+    if btn(1) then
+        playerSprite = 1
         playerDirX = 1
-        playerSprite = 1 -- Sprite-ID fれもr "nach rechts schauen"
-        playerPosX = playerPosX + 1
     end
 
-    if (btn(2)) then -- Oben (Button 2 = Pfeil hoch)
+    if btn(2) then
+        playerSprite = 2
         playerDirY = -1
-        playerSprite = 2 -- Sprite-ID fれもr "nach oben schauen"
-        playerPosY = playerPosY - 1
     end
 
-    if (btn(3)) then -- Unten (Button 3 = Pfeil runter)
+    if btn(3) then
+        playerSprite = 3
         playerDirY = 1
-        playerSprite = 3 -- Sprite-ID fれもr "nach unten schauen"
-        playerPosY = playerPosY + 1
     end
-    camera(playerPosX-64, playerPosY-64)
+
+    MoveAndCollision(playerDirX, playerDirY)
+    camera(playerPosX - 64, playerPosY - 64)
 end
+
 
 function drawPlayer()
     -- Zeichne den Spieler basierend auf der Blickrichtung

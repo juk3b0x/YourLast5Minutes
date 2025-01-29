@@ -6,12 +6,12 @@ __lua__
 
 -------------Varaibles----------------
 
-playerPosX = 64  
+playerPosX = 64
 playerPosY = 64
 playerDirX = 1
 playerDirY = 1
 playerSprite = flr(rnd(3))
-
+grid = {}
 
 
 
@@ -23,14 +23,20 @@ playerSprite = flr(rnd(3))
 
 function _init()
     drawPlayer()
+    camera(playerPosX, playerPosY)
+    init_grid()
+    create_map()
+    set_map()
 end 
 
 function _update()
     updatePlayer()
+    _draw()
 end
 
 function _draw()
     cls()
+    map(0, 0, 0, 0, 128, 64)
     drawPlayer()
 end
 
@@ -45,39 +51,172 @@ end
 
 -----------------MAP-------------------
 
+m_size = 129
+roughness = flr(rnd(3)) -1
 
+function adjust_roughness(size)
+    adj = 2
+    chance = rnd()
+    if chance > 0.9 then
+        adj = rnd((adj*2)+1)-adj
+    end
+    if chance >= 0.75 then adj+=1 end
+    return adj
+end
+function init_grid()
+    for x = 1, m_size do
+        local row = ""
+        for y = 1, m_size do
+            row = row .. "0" -- Append "0" for each column in the row
+        end
+        grid[x] = row -- Assign the constructed row to the grid
+    end
+    set_grid(1, 1, 0) --flr(rnd(16)))           -- Random value 0-15
+    set_grid(1, m_size, 4) --flr(rnd(16))) -- Random value 0-15
+    set_grid(m_size , 1, 4) --flr(rnd(16))) -- Random value 0-15
+    set_grid(m_size , m_size, 9) --flr(rnd(16))) -- Random value 0-15
+end
+function set_grid(x, y, value)
+    local row = grid[x]             -- Access the appropriate row
+    local hex_char = sub("0123456789abcdef", value, value) -- Convert value (0-15) to hex
+    grid[x] = sub(row, 1, y - 1) .. hex_char .. sub(row, y + 1) -- Update the character at the correct position
+end
+function get_grid(x, y)
+    local row = grid[x]             -- Access the correct row
+    local char = sub(row, y, y)     -- Extract the character at position y
+    return tonum(char, 0x1)          -- Convert hex character to a number (0-15)
+end
+function create_map()
+    local size = m_size-1
+    while size > 1 do
+        local half = size / 2
+        diamond(size, half)
+        square(size, half)
+        size = size / 2
+    end
+end
+function diamond(size, half)
+    for x = 1, m_size -1, size do
+        for y = 1, m_size-1, size do
+            local x1 = x
+            local x2 = x + size
+            local y1 = y
+            local y2 = y + size
+            local cornersum = get_grid(x1, y1) + get_grid(x2, y1) + get_grid(x1, y2) + get_grid(x2, y2)
+            local avg = flr(cornersum / 4)
+            local val = avg + adjust_roughness(size)
+            if val >= 9 then val = 9
+            elseif val <= 0 then val = 0 end
+            set_grid(min(x + half, m_size), min(y + half, m_size), val)
+        end
+    end
+end
+function square(size, half)
+    for x = 1, m_size - 1, half do
+        for y = (x + half - 1) % size + 1, m_size - 1, size do
+            local x1 = (x - half - 1 + m_size - 1) % (m_size - 1) + 1
+            local x2 = (x + half - 1) % m_size + 1
+            local y1 = (y + half - 1) % m_size + 1
+            local y2 = (y - half - 1 + m_size - 1) % (m_size - 1) + 1
+            local cornersum = get_grid(x1, y) + get_grid(x2, y) + get_grid(x, y2) + get_grid(x, y1)
+            local avg = flr(cornersum / 4)
+            local val = avg + adjust_roughness(size)
+            if val >= 15 then val = 15
+            elseif val <= 0 then val = 0 end
+            set_grid(x, y, val)
+        end
+    end
+end
+function set_map()
+    for x = 0, 127 do
+        for y = 0, 63 do
+            local value = get_grid(x+1, y+1)
+            local col = 0
+            if value < 2 then
+                col = 0 --colors[0]
+            elseif value >= 2 and value < 4 then
+                col = 1 --colors[1]
+            elseif value >= 4 and value < 6 then
+                col = 2 --colors[2]
+            elseif value >= 6 and value < 8 then
+                col = 3 --colors[3]
+            else col = 4 end--colors[4]
+            mset(x,y,col + 75)
+        end
+    end
+end
 
-
-
+function get_level(x, y)
+    local value = get_grid(x + 1, y + 1) 
+    if value < 2 then
+        return 0 
+    elseif value >= 2 and value < 4 then
+        return 1 
+    elseif value >= 4 and value < 6 then
+        return 2 
+    elseif value >= 6 and value < 8 then
+        return 3 
+    else
+        return 4 
+    end
+end
 
 ----------------Player-----------------
 
+function collisionTerrain(moveX, moveY)
+
+    local pX = flr(playerPosX / 8)    
+    local pY = flr(playerPosY / 8)
+    local gridX = pX + moveX
+    local gridY = pY + moveY
+
+        if (playerPosX % 8 == 0 and 
+            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
+            get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
+            playerPosX % 8 != 0 or
+            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+                playerPosX = playerPosX + moveX
+        end
+            pX = flr(playerPosX / 8)
+    
+        if (playerPosY % 8 == 0 and 
+            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
+            get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
+            playerPosY % 8 !=  0 or
+            (playerPosX % 8 == 0 and playerPosY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                playerPosY = playerPosY + moveY
+        end
+end
+
 
 function movePlayer()
-    -- Richtung zurれもcksetzen, um die Blickrichtung zu bestimmen
     playerDirX = 0
     playerDirY = 0
 
-    if (btn(0)) then -- Links (Button 0 = Pfeil links)
+    if btn(0) then
+        playerSprite = 0
         playerDirX = -1
-        playerSprite = 0 -- Sprite-ID fれもr "nach links schauen"
     end
 
-    if (btn(1)) then -- Rechts (Button 1 = Pfeil rechts)
+    if btn(1) then
+        playerSprite = 1
         playerDirX = 1
-        playerSprite = 1 -- Sprite-ID fれもr "nach rechts schauen"
     end
 
-    if (btn(2)) then -- Oben (Button 2 = Pfeil hoch)
+    if btn(2) then
+        playerSprite = 2
         playerDirY = -1
-        playerSprite = 2 -- Sprite-ID fれもr "nach oben schauen"
     end
 
-    if (btn(3)) then -- Unten (Button 3 = Pfeil runter)
+    if btn(3) then
+        playerSprite = 3
         playerDirY = 1
-        playerSprite = 3 -- Sprite-ID fれもr "nach unten schauen"
     end
+
+    collisionTerrain(playerDirX, playerDirY)
+    camera(playerPosX - 64, playerPosY - 64)
 end
+
 
 function drawPlayer()
     -- Zeichne den Spieler basierend auf der Blickrichtung
@@ -109,6 +248,11 @@ end
 
 
 -----------------Boss------------------
+
+
+
+-----------------Camera----------------
+
 
 
 __gfx__
