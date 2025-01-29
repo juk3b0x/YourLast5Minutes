@@ -25,7 +25,51 @@ Player = {
         move(self)
     end
 }
+-----------------Mob-------------------
+Mob = {}
+Mob.__index = Mob  -- Set metatable for Mob instances
 
+function Mob:new()
+    local self = setmetatable({}, Mob)  -- Create new instance
+    self.dmg = 10
+    self.mspeed = 1
+    self.hp = 100
+    self.posX = 0
+    self.posY = 0
+    self.dirX = 1
+    self.dirY = 0
+    self.sprite = 64
+    self.spawnpoint = {0,0}
+    return self
+end
+
+function Mob:move()
+    move(self)
+end
+
+function Mob:attack()
+    -- Attack logic (deal damage to player)
+end
+
+function Mob:die()
+    -- Despawn object and sprite
+    -- Give player gold
+end
+
+function Mob:spawn()
+    self.spawnpoint[1] = flr(rnd(128))
+    self.spawnpoint[2] = flr(rnd(64))
+    self.posX = self.spawnpoint[1]
+    self.posY = self.spawnpoint[2]
+end
+
+function Mob:patrol()
+    -- Patrol logic (between two points)
+end
+
+function Mob:chase()
+    -- Chase player logic
+end
 
 grid = {}
 mobs = {}
@@ -36,10 +80,19 @@ function _init()
     init_grid()
     create_map()
     set_map()
+    add(mobs, Mob:new())
+    print("before spawn")
+    for mob in all(mobs) do
+        mob:spawn()
+    end
+    print("after spawn")
 end 
 
 function _update()
     Player:update()
+    for mob in all(mobs) do
+        mob:move()
+    end
     _draw()
 end
 
@@ -47,6 +100,9 @@ function _draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
     draw(Player)
+    for mob in all(mobs) do
+        draw(mob)
+    end
 end
 
 
@@ -202,7 +258,8 @@ end
 function move(entity)
     entity.dirX = 0
     entity.dirY = 0
-
+    
+    if entity == Player then
     if btn(0) then
         entity.sprite = 0
         entity.dirX = -1
@@ -222,11 +279,33 @@ function move(entity)
         entity.sprite = 3
         entity.dirY = 1
     end
-
-    MoveAndCollision(entity, entity.dirX, entity.dirY)
-    if entity == Player then
-        camera(entity.posX - 64, entity.posY - 64)
+    camera(entity.posX - 64, entity.posY - 64)
+    
+    else
+        btns = {0,1,2,3}
+        rndbtn = rnd(btns)
+        if rndbtn == 0 then
+                entity.sprite = 64
+                entity.dirX = -1
+            end
+        
+            if rndbtn == 1 then
+                entity.sprite = 65
+                entity.dirX = 1
+            end
+        
+            if rndbtn == 2 then
+                entity.sprite = 80
+                entity.dirY = -1
+            end
+        
+            if rndbtn == 3 then
+                entity.sprite = 81
+                entity.dirY = 1
+            end
+        
     end
+    MoveAndCollision(entity, entity.dirX, entity.dirY)
 end
 
 function draw(entity)
@@ -234,14 +313,6 @@ function draw(entity)
     spr(entity.sprite, entity.posX, entity.posY)
 end
 ----------------Portal-----------------
-
-
-
-
-
-
-
------------------Mob-------------------
 
 
 
