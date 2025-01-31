@@ -5,10 +5,70 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
-----------------Player-----------------
+-------------Projectiles--------------
+Projectile = {}
+Projectile.__index = Projectile  -- Set metatable for Projectile instances
+
+function Projectile:new(sender)
+    local self = setmetatable({}, Projectile)  -- Create new instance
+    self.dmg = sender.dmg
+    self.range = 10
+    self.mspeed = 0
+    self.posX = 0
+    self.posY = 0
+    self.dirX = 1
+    self.dirY = 0
+    self.sprite = 12
+    self.spawnpoint = {0,0}
+    self:spawn(sender)
+    return self
+end
+
+function Projectile:move()
+    move(self)
+end
+
+function Projectile:die()
+    despawn(self)
+end
+
+function Projectile:spawn(sender)
+    self.mspeed = sender.aspeed
+    if sender.sprite == 0 then
+        self.spawnpoint[1] = sender.posX - 8
+        self.spawnpoint[2] = sender.posY
+        self.sprite = 12
+        self.dirX = -1
+        self.dirY = 0
+    elseif sender.sprite == 1 then
+        self.spawnpoint[1] = sender.posX + 8
+        self.spawnpoint[2] = sender.posY
+        self.sprite = 13
+        self.dirX = 1
+        self.dirY = 0
+    elseif sender.sprite == 2 then
+        self.spawnpoint[1] = sender.posX
+        self.spawnpoint[2] = sender.posY - 8
+        self.sprite = 14
+        self.dirY = -1
+        self.dirX = 0
+    elseif sender.sprite == 3 then
+        self.spawnpoint[1] = sender.posX
+        self.spawnpoint[2] = sender.posY + 8
+        self.sprite = 15
+        self.dirY = 1
+        self.dirX = 0
+    end
+    self.posX = self.spawnpoint[1]
+    self.posY = self.spawnpoint[2]
+    self.range = sender.range
+end
+---------Player-----------------
 Player = {
     dmg = 10,
+    aspeed = 1,
     mspeed = 1,
+    range = 10,
     hp = 100,
     posX = 0,
     posY = 0,
@@ -21,16 +81,13 @@ Player = {
         self.posY = 64
         self.dirX = 1
         self.dirY = 1
-        self.sprite = flr(rnd(3))
+        self.sprite = 64
     end,
 
     update = function(self)
         move(self)
-    end,
-    --function attack()
-      --  shoot(self)
-        --dealDMG(self, Mob)
-    --end
+        attack(self)
+    end
 }
 -----------------Mob-------------------
 Mob = {}
@@ -40,6 +97,8 @@ function Mob:new()
     local self = setmetatable({}, Mob)  -- Create new instance
     self.dmg = 10
     self.mspeed = 1
+    self.aspeed = 1
+    self.range = 10
     self.hp = 100
     self.posX = 0
     self.posY = 0
@@ -54,13 +113,8 @@ function Mob:move()
     move(self)
 end
 
---function Mob:attack()
-    --dealDMG(self, Player)
---end
-
 function Mob:die()
-    -- Despawn object and sprite
-    -- Give player gold
+    despawn(self)
 end
 
 function Mob:spawn()
@@ -91,11 +145,9 @@ function _init()
     for i = 1, 30 do
         add(mobs, Mob:new())
     end
-    print("before spawn")
     for mob in all(mobs) do
         mob:spawn()
     end
-    print("after spawn")
 end 
 
 function _update()
@@ -103,7 +155,14 @@ function _update()
     for mob in all(mobs) do
         mob:move()
     end
+    for projectile in all(projectiles) do
+        if projectile.range <= 0 then
+            projectile:die()
+        else projectile.range -= 1 end
+        projectile:move()
+    end
     _draw()
+    
 end
 
 function _draw()
@@ -113,6 +172,9 @@ function _draw()
     draw(Player)
     for mob in all(mobs) do
         draw(mob)
+    end
+    for projectile in all(projectiles) do
+        draw(projectile)
     end
 end
 
@@ -304,85 +366,126 @@ end
 
 
 function MoveAndCollision(entity, moveX, moveY)
-
-    local pX = flr(entity.posX / 8)    
-    local pY = flr(entity.posY / 8)
-    local gridX = pX + moveX
-    local gridY = pY + moveY
-
-        if (entity.posX % 8 == 0 and 
-            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
-            get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
-            entity.posX % 8 != 0 or
-            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
-                entity.posX = entity.posX + moveX*entity.mspeed
+    local speed = entity.mspeed
+    local newPosX = entity.posX + moveX * speed
+    local newPosY = entity.posY + moveY * speed
+    local leftTile   = flr((newPosX) / 8)
+    local rightTile  = flr((newPosX + 7) / 8) -- Consider entity width
+    local topTile    = flr((newPosY) / 8)
+    local bottomTile = flr((newPosY + 7) / 8) -- Consider entity height
+    if fget(mget(leftTile, topTile), 0) or
+        fget(mget(rightTile, topTile), 0) or
+        fget(mget(leftTile, bottomTile), 0) or
+        fget(mget(rightTile, bottomTile), 0) then
+        moveX = 0
+        moveY = 0
+    end
+    if leftTile < 0 or rightTile >= 128 or topTile < 0 or bottomTile >= 64 then
+        moveX = 0
+        moveY = 0
+    end
+    if getmetatable(entity) == Player or getmetatable(entity) == Mob then
+        for projectile in all(projectiles) do
+            if flr(projectile.posX / 8) == flr(entity.posX / 8) and 
+                flr(projectile.posY / 8) == flr(entity.posY / 8) then
+                receivedmg(entity, projectile.dmg)
+                projectile.range = flr(projectile.range / 2)
+            end
         end
-            pX = flr(entity.posX / 8)
-    
-        if (entity.posY % 8 == 0 and 
-            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
-            get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
-            entity.posY % 8 !=  0 or
-            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
-                entity.posY = entity.posY + moveY*entity.mspeed
-        end
+    end
+    entity.posX = entity.posX + moveX * entity.mspeed
+    entity.posY = entity.posY + moveY * entity.mspeed
 end
 function move(entity)
-    entity.dirX = 0
-    entity.dirY = 0
+    
     
     if entity == Player then
+        entity.dirX = 0
+        entity.dirY = 0
         if btn(0) then
             entity.sprite = 0
             entity.dirX = -1
         end
 
-    if btn(1) then
-        entity.sprite = 1
-        entity.dirX = 1
-    end
+        if btn(1) then
+            entity.sprite = 1
+            entity.dirX = 1
+        end
 
-    if btn(2) then
-        entity.sprite = 2
-        entity.dirY = -1
-    end
+        if btn(2) then
+            entity.sprite = 2
+            entity.dirY = -1
+        end
 
-    if btn(3) then
-        entity.sprite = 3
-        entity.dirY = 1
-    end
-    camera(entity.posX - 64, entity.posY - 64)
+        if btn(3) then
+            entity.sprite = 3
+            entity.dirY = 1
+        end
+        camera(entity.posX - 64, entity.posY - 64)
     
-    else
+    elseif getmetatable(entity) == Mob then
+        entity.dirX = 0
+        entity.dirY = 0
         btns = {0,1,2,3}
         rndbtn = rnd(btns)
         if rndbtn == 0 then
-                entity.sprite = 64
-                entity.dirX = -1
-            end
-        
-            if rndbtn == 1 then
-                entity.sprite = 65
-                entity.dirX = 1
-            end
-        
-            if rndbtn == 2 then
-                entity.sprite = 80
-                entity.dirY = -1
-            end
-        
-            if rndbtn == 3 then
+            entity.sprite = 64
+            entity.dirX = -1
+                
+        elseif rndbtn == 1 then
+            entity.sprite = 65
+            entity.dirX = 1
+                
+        elseif rndbtn == 2 then
+            entity.sprite = 80
+            entity.dirY = -1
+               
+        elseif rndbtn == 3 then
                 entity.sprite = 81
                 entity.dirY = 1
-            end
-        
-    end
+        end
+    elseif getmetatable(entity) == Projectile then
+        if entity.dirX == -1 then
+            entity.sprite = 12
+        elseif entity.dirX == 1 then
+            entity.sprite = 13
+        elseif entity.dirY == -1 then
+            entity.sprite = 14
+        elseif entity.dirY == 1 then
+            entity.sprite = 15
+        end
+    end 
     MoveAndCollision(entity, entity.dirX, entity.dirY)
 end
 
+function attack(sender)
+    if sender == Player then
+        if btn(4) then
+            add(projectiles, Projectile:new(sender))
+        end
+    end
+end
 function draw(entity)
     -- Zeichne den Spieler basierend auf der Blickrichtung
     spr(entity.sprite, entity.posX, entity.posY)
+end
+function despawn(entity)
+    if getmetatable(entity) == Projectile then
+        del(projectiles, entity)  
+    end
+    if getmetatable(entity) == Mob then
+        del(mobs, entity)
+    end
+end
+function receivedmg(entity,dmg)
+    if entity == Player then
+        entity.hp -= dmg
+    else
+        entity.hp -= dmg
+        if entity.hp <= 0 then
+            entity:die()
+        end
+    end
 end
 ----------------Portal-----------------
 
@@ -402,14 +505,14 @@ end
 
 
 __gfx__
-008880000008880000088000000880000008880077777777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0088880000888800008888000088880000088c0007777777777777777777777777777777777777777777777777777777bb000bbbbbbbbbbbbbbbbbbbbbbbbbbb
-00cc88000088cc0000888800008cc80000888c0007777777777777777777777777777777777777777777777777777777b00000bbbbbbbbbbbbbbbbbbbbbbbbbb
-00cc88000088cc0000888800008cc8000088880007777777777777777777777777777777777777777777777777777777000000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000088880007777777777777777777777777777777777777777777777777777777000000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000088880000777777777777777777777777777777777777777777777777777777bbb000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000008800000777777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-008800000000880000080000000800000008800000077777777777777777777777777777777777777777777777777777bbbbb00bbbbbbbbbbbbbbbbbbbbbbbbb
+00888000000888000008800000088000000888007777777777777777777777777777777777777777777777777777777700000000000000000000000000000000
+0088880000888800008888000088880000088c000777777777777777777777777777777777777777777777777777777700000000000000000000800000000000
+00cc88000088cc0000888800008cc80000888c000777777777777777777777777777777777777777777777777777777700000000000000000000900000000000
+00cc88000088cc0000888800008cc800008888000777777777777777777777777777777777777777777777777777777700000000000000000000a000000a0000
+008888000088880000888800008888000088880007777777777777777777777777777777777777777777777777777777089aa000000aa9800000a000000a0000
+00888800008888000088880000888800008888000077777777777777777777777777777777777777777777777777777700000000000000000000000000090000
+00888800008888000088880000888800000880000077777777777777777777777777777777777777777777777777777700000000000000000000000000080000
+00880000000088000008000000080000000880000007777777777777777777777777777777777777777777777777777700000000000000000000000000000000
 008880000008880000088000000880007777700070077777777777777777777777777777777777777777777777777777bbbb0000bbbbbbbbbbbbbbbbbbbbbbbb
 008888000088880000888800008888007777700770077777777777777777777777777777777777777777777777777777bbb000000bbbbbbbbbbbbbbbbbbbbbbb
 00cc88000088cc0000888800008cc8007777700000007777777777777777777777777777777777777777777777777777bbb00bb00bbbbbbbbbbbbbbbbbbbbbbb
@@ -466,3 +569,6 @@ __gfx__
 0000000000000000888888888888888888880000088888880000000000000000000000000000000000000000000000003393333333338283333bb33355544455
 00000000000000008888888888888888888888888888888800000000000000000000000000000000000000000000000039a933b333333b33b33b333355445554
 00000000000000008888888888888888888888888888888800000000000000000000000000000000000000000000000033933333b3333333b333333b55555545
+__gff__
+0000000000000000000000008080808000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000000000001000001000000010000000000000000000000000000000100000000000000000000000000000001
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
