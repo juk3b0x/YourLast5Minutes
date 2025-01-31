@@ -13,7 +13,7 @@
 [000000]     08 blit_method 0  // 0 auto  1 software (slower but sometimes more reliable)  2 hardware (can do filtered scaling) 
 [000000]     09 foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to conserve battery power
 [000000]     10 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
-[000000]     11 sessions 66 // number of times program has been run
+[000000]     11 sessions 128 // number of times program has been run
 [000000]     12 rmb_key 0 // 0 for none  226 for LALT
 [000000]     13 desktop_path 
 [000000]     14 read_controllers_in_background 0
@@ -51,49 +51,49 @@
 [000000]     46 capture_timestamps 0
 [000000]   
 [000000]   codo_system_init
-[000253]   Compiled against SDL version: 2.0.2
-[000253]   Linked against SDL version:   2.0.9
-[000253]   Current video driver: windows
-[000253]   codo_reset_timer
-[000253]   codo_gui_init
-[000253]   codo_keys_init
-[000253]   codo_text_init
-[000253]   codo_video_init
-[000253]   codo_mouse_init
-[000253]   codo_joystick_init
-[000254]   Reading controller mappings: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-2/sdl_controllers.txt
-[000254]   searching for joysticks
-[000254]     found 0 joysticks
-[000254]   ok
-[000254] ok
-[000259] codo_load_pod: C:/Users/Tim/Downloads/pico-8_0.2.6b_windows/pico-8/pico8.dat ok 
-[000261] codo_set_screen 128 128 8 100
-[000261]  window size: 640 540
-[000401]   setting filter to nearest (screen_mode 0  back page width: 128)
+[000235]   Compiled against SDL version: 2.0.2
+[000236]   Linked against SDL version:   2.0.9
+[000236]   Current video driver: windows
+[000236]   codo_reset_timer
+[000236]   codo_gui_init
+[000236]   codo_keys_init
+[000236]   codo_text_init
+[000236]   codo_video_init
+[000236]   codo_mouse_init
+[000236]   codo_joystick_init
+[000236]   Reading controller mappings: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-3/sdl_controllers.txt
+[000236]   searching for joysticks
+[000236]     found 0 joysticks
+[000236]   ok
+[000236] ok
+[000241] codo_load_pod: C:/Users/Tim/Downloads/pico-8_0.2.6b_windows/pico-8/pico8.dat ok 
+[000243] codo_set_screen 128 128 8 100
+[000243]  window size: 640 540
+[000362]   setting filter to nearest (screen_mode 0  back page width: 128)
   renderer direct3d:
    flags: 0x0000000E ( |  | )
    texture formats (3): ARGB8888, YV12, IYUV
    max texture size: 16384x16384
-[000403]  desktop size: 2048 1152
-[000403] ok
-[000405] codo_sound_init mix_buffer_size: 1024
-[000405] codo_sound_init
-[000405] SDL_INIT_AUDIO ok
-[000420] SDL_OpenAudio ok
-[000420]  freq:22050
+[000363]  desktop size: 2048 1152
+[000363] ok
+[000365] codo_sound_init mix_buffer_size: 1024
+[000365] codo_sound_init
+[000365] SDL_INIT_AUDIO ok
+[000378] SDL_OpenAudio ok
+[000378]  freq:22050
  channels:1
-[000420] Built-in audio drivers: 0 wasapi 1 directsound 2 winmm 3 disk 4 dummy
-[000420] Current audio driver: wasapi
-[002096] loading c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-2/yourlast5minutes.p8
-[003770] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-2/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-2/yourlast5minutes.p8 running_cart_lid: 
-[017168] window closed (14)
-[017168] codo_exit
-[017168]   cmusic_stop
-[017168]   codo_main_exit
-[017169]   codo_config_save
-[017169]   codo_sound_exit
-[017169]   codo_video_exit
-[017189]   codo_joystick_exit
-[017189]   codo_system_exit
-[017189]   codo_items_created: 1302
-[017189] ok
+[000378] Built-in audio drivers: 0 wasapi 1 directsound 2 winmm 3 disk 4 dummy
+[000378] Current audio driver: wasapi
+[002052] loading c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-3/yourlast5minutes.p8
+[003731] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-3/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-3/yourlast5minutes.p8 running_cart_lid: 
+[3464214] window closed (14)
+[3464215] codo_exit
+[3464215]   cmusic_stop
+[3464215]   codo_main_exit
+[3464215]   codo_config_save
+[3464216]   codo_sound_exit
+[3464216]   codo_video_exit
+[3464230]   codo_joystick_exit
+[3464230]   codo_system_exit
+[3464231]   codo_items_created: 1303
+[3464231] ok
