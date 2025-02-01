@@ -5,6 +5,68 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
+m_size = 129
+roughness = flr(rnd(3)) -1
+grid = {}
+mobs = {}
+projectiles = {}
+stats_active = false
+selected_option = 1
+
+-------------Cartridge----------------
+function _init()
+    Player:init()
+    camera(Player.posX, Player.posY)
+    init_grid()
+    create_map()
+    set_map()
+    for i = 1, 30 do
+        add(mobs, Mob:new())
+    end
+    for mob in all(mobs) do
+        mob:spawn()
+    end
+end 
+
+function _update()
+    if btnp(5) then
+        stats_active = not stats_active
+    end
+    if stats_active then
+        menu_controls()
+    
+    else
+        Player:update()
+        for mob in all(mobs) do
+            mob:move()
+        end
+        for projectile in all(projectiles) do
+            if projectile.range <= 0 then
+                projectile:die()
+            else projectile.range -= 1 end
+            projectile:move()
+        end
+    end
+    _draw()
+    
+end
+
+function _draw()
+    cls()
+    map(0, 0, 0, 0, 128, 64)
+    if stats_active then
+        draw_menu(Player.posX, Player.posY)
+    else
+        draw(Player)
+        for mob in all(mobs) do
+            draw(mob)
+        end
+        for projectile in all(projectiles) do
+            draw(projectile)
+        end
+    end
+end
+
 -------------Projectiles--------------
 Projectile = {}
 Projectile.__index = Projectile  -- Set metatable for Projectile instances
@@ -70,6 +132,7 @@ Player = {
     mspeed = 1,
     range = 10,
     hp = 100,
+    gold = 100,
     posX = 0,
     posY = 0,
     dirX = 0,
@@ -132,66 +195,57 @@ function Mob:chase()
     -- Chase player logic
 end
 
-grid = {}
-mobs = {}
-projectiles = {}
-
-function _init()
-    Player:init()
-    camera(Player.posX, Player.posY)
-    init_grid()
-    create_map()
-    set_map()
-    for i = 1, 30 do
-        add(mobs, Mob:new())
-    end
-    for mob in all(mobs) do
-        mob:spawn()
-    end
-end 
-
-function _update()
-    Player:update()
-    for mob in all(mobs) do
-        mob:move()
-    end
-    for projectile in all(projectiles) do
-        if projectile.range <= 0 then
-            projectile:die()
-        else projectile.range -= 1 end
-        projectile:move()
-    end
-    _draw()
-    
-end
-
-function _draw()
-    cls()
-    map(0, 0, 0, 0, 128, 64)
-    
-    draw(Player)
-    for mob in all(mobs) do
-        draw(mob)
-    end
-    for projectile in all(projectiles) do
-        draw(projectile)
-    end
-end
 
 
 ----------------Stats------------------
+function draw_menu(x_center, y_center)
+    -- Solid menu background (covering 64x64 pixels)
+    x_start = x_center - 32
+    y_start = y_center - 32
+    x_end = x_center + 32
+    y_end = y_center + 32
+    rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+    rect(x_start,y_start,x_end,y_end, 7) -- White border
 
+    -- Menu title
+    print("player stats", x_start + 5, y_start+2, 7)
 
+    -- Stats list with click areas
+    print((selected_option == 1 and ">" or " ").." Healthpoints: "..Player.hp, x_start+2, y_start+10, 7)
+    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg, x_start+2, y_start+18, 7)
+    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed, x_start+2, y_start+26, 7)
+    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed, x_start+2, y_start+34, 7)
+    print((selected_option == 5 and ">" or " ").." Range: "..Player.range, x_start+2, y_start+42, 7)
 
+    -- Points display
+    print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+end
 
+function menu_controls()
+    -- Get mouse input (stat(32) = X, stat(33) = Y, stat(34) = Left Click)
+    local mx, my, click = stat(32), stat(33), stat(34)
 
+    -- Move selection up/down
+    if btnp(2) then selected_option = max(1, selected_option - 1) end
+    if btnp(3) then selected_option = min(5, selected_option + 1) end
 
-
+    -- Increase stat if clicked or if "O" button (btn(4)) is pressed
+    if (click == 1 or btnp(4)) and Player.gold > 0 then
+        if selected_option == 1 or (mx >= 38 and mx <= 90 and my >= 45 and my <= 53) then
+            Player.hp += 1
+        elseif selected_option == 2 or (mx >= 38 and mx <= 90 and my >= 55 and my <= 63) then
+            Player.dmg += 1
+        elseif selected_option == 3 or (mx >= 38 and mx <= 90 and my >= 65 and my <= 73) then
+            Player.aspeed += 1
+        elseif selected_option == 4 or (mx >= 38 and mx <= 90 and my >= 75 and my <= 83) then
+            Player.mspeed += 1
+        elseif selected_option == 5 or (mx >= 38 and mx <= 90 and my >= 85 and my <= 93) then
+            Player.range += 1
+        end
+        Player.gold -= 1
+    end
+end
 -----------------MAP-------------------
-
-m_size = 129
-roughness = flr(rnd(3)) -1
-
 function adjust_roughness(size)
     adj = 2
     chance = rnd()
@@ -363,8 +417,6 @@ function get_level(x, y)
     end
 end
 
-
-
 function MoveAndCollision(entity, moveX, moveY)
     local speed = entity.mspeed
     local newPosX = entity.posX + moveX * speed
@@ -397,8 +449,6 @@ function MoveAndCollision(entity, moveX, moveY)
     entity.posY = entity.posY + moveY * entity.mspeed
 end
 function move(entity)
-    
-    
     if entity == Player then
         entity.dirX = 0
         entity.dirY = 0
