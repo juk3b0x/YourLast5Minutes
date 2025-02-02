@@ -92,6 +92,7 @@ function Projectile:new(sender)
     self.dirY = 0
     self.sprite = 12
     self.spawnpoint = {0,0}
+    self.sender = sender
     self:spawn(sender)
     return self
 end
@@ -559,13 +560,14 @@ function spawnWave(count)
     end
 end
 function projectileHit(entity)
-    if getmetatable(entity) == Player or getmetatable(entity) == Mob then
-        for projectile in all(projectiles) do
-            if flr(projectile.posX / 8) == flr(entity.posX / 8) and 
-                flr(projectile.posY / 8) == flr(entity.posY / 8) then
+    for projectile in all(projectiles) do
+        if flr(projectile.posX / 8) == flr(entity.posX / 8) and         //entity.x stimmt überein
+            flr(projectile.posY / 8) == flr(entity.posY / 8) and not    //entity.y stimmt überein
+            (getmetatable(entity) == getmetatable(entity.sender)) and not//mobs schießen nicht ausversehen auf mobs
+            (entity == entity.sender) and not
+            (getmetatable(entity) == Projectile) then                              //player kann nicht durch seine eigenen schüsse verletzt werden
                 receivedmg(entity, projectile.dmg)
                 projectile.range = flr(projectile.range / 2)
-            end
         end
     end
 end
