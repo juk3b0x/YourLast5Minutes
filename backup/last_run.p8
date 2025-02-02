@@ -5,11 +5,148 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
-----------------Player-----------------
+m_size = 129
+roughness = flr(rnd(3)) -1
+grid = {}
+mobs = {}
+projectiles = {}
+stats_active = false
+selected_option = 1
+lastCamX = 64
+lastCamY = 64
+timer = 5*60*30
+
+-------------Cartridge----------------
+function _init()
+    Player:init()
+    camera(Player.posX, Player.posY)
+    init_grid()
+    create_map()
+    set_map()
+    for i = 1, 30 do
+        add(mobs, Mob:new())
+    end
+    for mob in all(mobs) do
+        mob:spawn()
+    end 
+end 
+
+function _update()
+    if btnp(5) then
+        stats_active = not stats_active
+    end
+    if stats_active then
+        menu_controls()
+    
+    else
+        Player:update()
+        for mob in all(mobs) do
+            mob:move()
+        end
+        for projectile in all(projectiles) do
+            if projectile.range <= 0 then
+                projectile:die()
+            else projectile.range -= 1 end
+            projectile:move()
+        end
+    end
+
+    if timer > 0 then
+        timer -= 1  -- Reduziert den Timer jede Frame
+    end
+    
+    
+    _draw()
+    
+    
+end
+
+function _draw()
+    cls()
+    map(0, 0, 0, 0, 128, 64)
+    if stats_active then
+        draw_menu(Player.posX, Player.posY)
+    else
+        draw(Player)
+        for mob in all(mobs) do
+            draw(mob)
+        end
+        for projectile in all(projectiles) do
+            draw(projectile)
+        end
+    end
+    updateHearts()
+    local Ox, Oy = overlay(Player, 68, 2)
+    print("tIME lEFT: "..flr(timer / 30).."s", Ox, Oy , 7)
+end
+
+-------------Projectiles--------------
+Projectile = {}
+Projectile.__index = Projectile  -- Set metatable for Projectile instances
+
+function Projectile:new(sender)
+    local self = setmetatable({}, Projectile)  -- Create new instance
+    self.dmg = sender.dmg
+    self.range = 10
+    self.mspeed = 0
+    self.posX = 0
+    self.posY = 0
+    self.dirX = 1
+    self.dirY = 0
+    self.sprite = 12
+    self.spawnpoint = {0,0}
+    self:spawn(sender)
+    return self
+end
+
+function Projectile:move()
+    move(self)
+    projectileHit(self)
+end
+
+function Projectile:die()
+    despawn(self)
+end
+
+function Projectile:spawn(sender)
+    self.mspeed = sender.aspeed
+    if sender.sprite == 0 then
+        self.spawnpoint[1] = sender.posX - 8
+        self.spawnpoint[2] = sender.posY
+        self.sprite = 12
+        self.dirX = -1
+        self.dirY = 0
+    elseif sender.sprite == 1 then
+        self.spawnpoint[1] = sender.posX + 8
+        self.spawnpoint[2] = sender.posY
+        self.sprite = 13
+        self.dirX = 1
+        self.dirY = 0
+    elseif sender.sprite == 2 then
+        self.spawnpoint[1] = sender.posX
+        self.spawnpoint[2] = sender.posY - 8
+        self.sprite = 14
+        self.dirY = -1
+        self.dirX = 0
+    elseif sender.sprite == 3 then
+        self.spawnpoint[1] = sender.posX
+        self.spawnpoint[2] = sender.posY + 8
+        self.sprite = 15
+        self.dirY = 1
+        self.dirX = 0
+    end
+    self.posX = self.spawnpoint[1]
+    self.posY = self.spawnpoint[2]
+    self.range = sender.range
+end
+---------Player-----------------
 Player = {
     dmg = 10,
-    mspeed = 1,
-    hp = 100,
+    aspeed = 1,
+    mspeed = 2,
+    range = 20,
+    hp = 60,
+    gold = 100,
     posX = 0,
     posY = 0,
     dirX = 0,
@@ -21,16 +158,18 @@ Player = {
         self.posY = 64
         self.dirX = 1
         self.dirY = 1
-        self.sprite = flr(rnd(3))
+        self.sprite = 64
+        camera(lastCamX, lastCamY)
     end,
 
     update = function(self)
         move(self)
-    end,
-    --function attack()
-      --  shoot(self)
-        --dealDMG(self, Mob)
-    --end
+        projectileHit(self)
+        attack(self)
+        cam(self)
+
+
+    end
 }
 -----------------Mob-------------------
 Mob = {}
@@ -40,96 +179,155 @@ function Mob:new()
     local self = setmetatable({}, Mob)  -- Create new instance
     self.dmg = 10
     self.mspeed = 1
+    self.aspeed = 1
+    self.range = 300
     self.hp = 100
     self.posX = 0
     self.posY = 0
     self.dirX = 1
     self.dirY = 0
     self.sprite = 64
-    self.spawnpoint = {0,0}
+    self.spawnpoint = {0, 0}
+    -- Patrolpunkte (links/rechts oder oben/unten)
+    self.patrolPoint1 = {flr(rnd(128)*8), flr(rnd(64)*8)}
+    self.patrolPoint2 = {flr(rnd(128)*8), flr(rnd(64)*8)}
+    self.targetPoint = self.patrolPoint1  -- Startpunkt der Patrouille
+    
     return self
 end
 
 function Mob:move()
-    move(self)
+    projectileHit(self)
+    self:chase(Player)
 end
 
---function Mob:attack()
-    --dealDMG(self, Player)
---end
-
 function Mob:die()
-    -- Despawn object and sprite
-    -- Give player gold
+    despawn(self)
 end
 
 function Mob:spawn()
-    self.spawnpoint[1] = flr(rnd(128))
-    self.spawnpoint[2] = flr(rnd(64))
+    self.spawnpoint[1] = flr(rnd(128*8))
+    self.spawnpoint[2] = flr(rnd(64*8))
     self.posX = self.spawnpoint[1]
     self.posY = self.spawnpoint[2]
 end
 
 function Mob:patrol()
-    -- Patrol logic (between two points)
-end
-
-function Mob:chase()
-    -- Chase player logic
-end
-
-grid = {}
-mobs = {}
-projectiles = {}
-
-function _init()
-    Player:init()
-    camera(Player.posX, Player.posY)
-    init_grid()
-    create_map()
-    set_map()
-    for i = 1, 30 do
-        add(mobs, Mob:new())
-    end
-    print("before spawn")
-    for mob in all(mobs) do
-        mob:spawn()
-    end
-    print("after spawn")
-end 
-
-function _update()
-    Player:update()
-    for mob in all(mobs) do
-        mob:move()
-    end
-    _draw()
-end
-
-function _draw()
-    cls()
-    map(0, 0, 0, 0, 128, 64)
+    local dx = self.targetPoint[1] - self.posX
+    local dy = self.targetPoint[2] - self.posY
     
-    draw(Player)
-    for mob in all(mobs) do
-        draw(mob)
+    if abs(dx) > 1 then
+        MoveAndCollision(self, sgn(dx), 0)
+    end
+    
+    if abs(dy) > 1 then
+        MoveAndCollision(self, 0, sgn(dy))
+    end
+
+    if abs(dx) <= 1 and abs(dy) <= 1 then
+        if self.targetPoint == self.patrolPoint1 then
+            self.targetPoint = self.patrolPoint2
+        else
+            self.targetPoint = self.patrolPoint1
+        end
+    end
+end
+
+function Mob:chase(entity)
+    local dx = entity.posX - self.posX
+    local dy = entity.posY - self.posY
+    local distance = sqrt(dx * dx + dy * dy)
+
+    if timer % 120 > 30  then
+        if distance < self.range  then
+            MoveAndCollision(self, sgn(dx), sgn(dy))
+        else 
+             self:patrol() 
+         end
+    elseif timer % 120 < 30 then
+        self:patrol()
     end
 end
 
 
 ----------------Stats------------------
+function draw_menu(x_center, y_center)
+    -- Solid menu background (covering 64x64 pixels)
+    x_start = x_center - 32
+    y_start = y_center - 32
+    x_end = x_center + 32
+    y_end = y_center + 32
+    rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+    rect(x_start,y_start,x_end,y_end, 7) -- White border
 
+    -- Menu title
+    print("player stats", x_start + 5, y_start+2, 7)
 
+    -- Stats list with click areas
+    print((selected_option == 1 and ">" or " ").." Healthpoints: "..Player.hp, x_start+2, y_start+10, 7)
+    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg, x_start+2, y_start+18, 7)
+    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed, x_start+2, y_start+26, 7)
+    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed, x_start+2, y_start+34, 7)
+    print((selected_option == 5 and ">" or " ").." Range: "..Player.range, x_start+2, y_start+42, 7)
 
+    -- Points display
+    print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+end
 
+function menu_controls()
+    -- Get mouse input (stat(32) = X, stat(33) = Y, stat(34) = Left Click)
+    local mx, my, click = stat(32), stat(33), stat(34)
 
+    -- Move selection up/down
+    if btnp(2) then selected_option = max(1, selected_option - 1) end
+    if btnp(3) then selected_option = min(5, selected_option + 1) end
 
+    -- Increase stat if clicked or if "O" button (btn(4)) is pressed
+    if (click == 1 or btnp(4)) and Player.gold > 0 then
+        if selected_option == 1 or (mx >= 38 and mx <= 90 and my >= 45 and my <= 53) then
+            Player.hp += 1
+        elseif selected_option == 2 or (mx >= 38 and mx <= 90 and my >= 55 and my <= 63) then
+            Player.dmg += 1
+        elseif selected_option == 3 or (mx >= 38 and mx <= 90 and my >= 65 and my <= 73) then
+            Player.aspeed += 1
+        elseif selected_option == 4 or (mx >= 38 and mx <= 90 and my >= 75 and my <= 83) then
+            Player.mspeed += 1
+        elseif selected_option == 5 or (mx >= 38 and mx <= 90 and my >= 85 and my <= 93) then
+            Player.range += 1
+        end
+        Player.gold -= 1
+    end
+end
+
+function updateHearts()
+    if Player.hp < 20 then
+        spr(33, overlay(Player,1 , 1))
+    else
+        spr(32, overlay(Player,1 , 1))
+    end
+    if Player.hp < 40 then
+        spr(33, overlay(Player,10 , 1))
+    else
+        spr(32, overlay(Player,10 , 1))
+    end
+    if Player.hp < 60 then
+        spr(33, overlay(Player,19 , 1))
+    else
+        spr(32, overlay(Player,19 , 1))
+    end
+    if Player.hp < 80 then
+        spr(33, overlay(Player,28 , 1))
+    else
+        spr(32, overlay(Player,28 , 1))
+    end
+    if Player.hp < 100 then
+        spr(33, overlay(Player,37 , 1))
+    else
+        spr(32, overlay(Player,37 , 1))
+    end
+end
 
 -----------------MAP-------------------
-
-m_size = 129
-roughness = flr(rnd(3)) -1
-
 function adjust_roughness(size)
     adj = 2
     chance = rnd()
@@ -170,6 +368,7 @@ function create_map()
         square(size, half)
         size = size / 2
     end
+    border(m_size-1)
 end
 function diamond(size, half)
     for x = 1, m_size -1, size do
@@ -199,9 +398,20 @@ function square(size, half)
             local val = avg + adjust_roughness(size)
             if val >= 15 then val = 15
             elseif val <= 0 then val = 0 end
+
             set_grid(x, y, val)
         end
     end
+end
+function border(p)
+    for x = 1, p do
+        for y = 1, 64 do
+            if x == 1 or x == p or y == 1 or y == 64   then
+                set_grid(x, y, 15)
+            end
+        end
+    end
+    
 end
 function set_map()
     for x = 0, 127 do
@@ -309,80 +519,139 @@ function MoveAndCollision(entity, moveX, moveY)
     local pY = flr(entity.posY / 8)
     local gridX = pX + moveX
     local gridY = pY + moveY
+    moveWhile = entity.mspeed
+    
+    while(moveWhile > 0) do
+
+        pX = flr(entity.posX / 8)    
+        pY = flr(entity.posY / 8)
+        gridX = pX + moveX
+        gridY = pY + moveY
 
         if (entity.posX % 8 == 0 and 
             get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
             get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
             entity.posX % 8 != 0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
-                entity.posX = entity.posX + moveX*entity.mspeed
+                entity.posX = entity.posX + moveX
         end
-            pX = flr(entity.posX / 8)
-    
+
+        pX = flr(entity.posX / 8) 
+        gridX = pX + moveX
+
         if (entity.posY % 8 == 0 and 
             get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
             get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
             entity.posY % 8 !=  0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
-                entity.posY = entity.posY + moveY*entity.mspeed
+                entity.posY = entity.posY + moveY
         end
+        moveWhile -= 1
+    end
 end
+
+
+function projectileHit(entity)
+    if getmetatable(entity) == Player or getmetatable(entity) == Mob then
+        for projectile in all(projectiles) do
+            if flr(projectile.posX / 8) == flr(entity.posX / 8) and 
+                flr(projectile.posY / 8) == flr(entity.posY / 8) then
+                receivedmg(entity, projectile.dmg)
+                projectile.range = flr(projectile.range / 2)
+            end
+        end
+    end
+end
+
+
 function move(entity)
-    entity.dirX = 0
-    entity.dirY = 0
-    
     if entity == Player then
+        entity.dirX = 0
+        entity.dirY = 0
         if btn(0) then
             entity.sprite = 0
             entity.dirX = -1
         end
 
-    if btn(1) then
-        entity.sprite = 1
-        entity.dirX = 1
-    end
+        if btn(1) then
+            entity.sprite = 1
+            entity.dirX = 1
+        end
 
-    if btn(2) then
-        entity.sprite = 2
-        entity.dirY = -1
-    end
+        if btn(2) then
+            entity.sprite = 2
+            entity.dirY = -1
+        end
 
-    if btn(3) then
-        entity.sprite = 3
-        entity.dirY = 1
-    end
-    camera(entity.posX - 64, entity.posY - 64)
+        if btn(3) then
+            entity.sprite = 3
+            entity.dirY = 1
+        end
+        
     
-    else
+    elseif getmetatable(entity) == Mob then
+        entity.dirX = 0
+        entity.dirY = 0
         btns = {0,1,2,3}
         rndbtn = rnd(btns)
         if rndbtn == 0 then
-                entity.sprite = 64
-                entity.dirX = -1
-            end
-        
-            if rndbtn == 1 then
-                entity.sprite = 65
-                entity.dirX = 1
-            end
-        
-            if rndbtn == 2 then
-                entity.sprite = 80
-                entity.dirY = -1
-            end
-        
-            if rndbtn == 3 then
+            entity.sprite = 64
+            entity.dirX = -1
+                
+        elseif rndbtn == 1 then
+            entity.sprite = 65
+            entity.dirX = 1
+                
+        elseif rndbtn == 2 then
+            entity.sprite = 80
+            entity.dirY = -1
+               
+        elseif rndbtn == 3 then
                 entity.sprite = 81
                 entity.dirY = 1
-            end
-        
-    end
+        end
+    elseif getmetatable(entity) == Projectile then
+        if entity.dirX == -1 then
+            entity.sprite = 12
+        elseif entity.dirX == 1 then
+            entity.sprite = 13
+        elseif entity.dirY == -1 then
+            entity.sprite = 14
+        elseif entity.dirY == 1 then
+            entity.sprite = 15
+        end
+    end 
     MoveAndCollision(entity, entity.dirX, entity.dirY)
 end
 
+function attack(sender)
+    if sender == Player then
+        if btn(4) then
+            add(projectiles, Projectile:new(sender))
+        end
+    end
+end
 function draw(entity)
     -- Zeichne den Spieler basierend auf der Blickrichtung
     spr(entity.sprite, entity.posX, entity.posY)
+end
+function despawn(entity)
+    if getmetatable(entity) == Projectile then
+        del(projectiles, entity)  
+    end
+    if getmetatable(entity) == Mob then
+        del(mobs, entity)
+    end
+end
+function receivedmg(entity,dmg)
+    if entity == Player then
+        entity.hp -= dmg
+    else
+        entity.hp -= dmg
+        if entity.hp <= 0 then
+            entity:die()
+        end
+    end
 end
 ----------------Portal-----------------
 
@@ -399,17 +668,55 @@ end
 
 -----------------Camera----------------
 
+function cam(entity)
+    local x = entity.posX - 64
+    local y = entity.posY - 64
+    if entity.posX/8 > m_size - 8 then
+        x = m_size * 7
+    end
+    if entity.posX/8 < 8 then
+        x = 0
+    end
+    if entity.posY/8 > m_size/2 - 8 then
+        y = m_size/2 * 6
+    end
+    if entity.posY/8 < 8 then
+        y = 0
+    end
+    camera(x,y)
+end
+
+function overlay(entity,offsetX ,offsetY)
+    local x = entity.posX - 64
+    local y = entity.posY - 64 
+    if entity.posX/8 > m_size - 8 then
+        x = m_size * 7
+    end
+    if entity.posX/8 < 8 then
+        x = 0
+    end
+    if entity.posY/8 > m_size/2 - 8 then
+        y = m_size/2 * 6
+    end
+    if entity.posY/8 < 8 then
+        y = 0
+    end
+    return x + offsetX, y + offsetY
+end
+
+---------------------------------------
+
 
 
 __gfx__
-008880000008880000088000000880000008880077777777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0088880000888800008888000088880000088c0007777777777777777777777777777777777777777777777777777777bb000bbbbbbbbbbbbbbbbbbbbbbbbbbb
-00cc88000088cc0000888800008cc80000888c0007777777777777777777777777777777777777777777777777777777b00000bbbbbbbbbbbbbbbbbbbbbbbbbb
-00cc88000088cc0000888800008cc8000088880007777777777777777777777777777777777777777777777777777777000000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000088880007777777777777777777777777777777777777777777777777777777000000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000088880000777777777777777777777777777777777777777777777777777777bbb000bbbbbbbbbbbbbbbbbbbbbbbbbb
-008888000088880000888800008888000008800000777777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-008800000000880000080000000800000008800000077777777777777777777777777777777777777777777777777777bbbbb00bbbbbbbbbbbbbbbbbbbbbbbbb
+00888000000888000008800000088000000888007777777777777777777777777777777777777777777777777777777700000000000000000000000000000000
+0088880000888800008888000088880000088c000777777777777777777777777777777777777777777777777777777700000000000000000000800000000000
+00cc88000088cc0000888800008cc80000888c000777777777777777777777777777777777777777777777777777777700000000000000000000900000000000
+00cc88000088cc0000888800008cc800008888000777777777777777777777777777777777777777777777777777777700000000000000000000a000000a0000
+008888000088880000888800008888000088880007777777777777777777777777777777777777777777777777777777089aa000000aa9800000a000000a0000
+00888800008888000088880000888800008888000077777777777777777777777777777777777777777777777777777700000000000000000000000000090000
+00888800008888000088880000888800000880000077777777777777777777777777777777777777777777777777777700000000000000000000000000080000
+00880000000088000008000000080000000880000007777777777777777777777777777777777777777777777777777700000000000000000000000000000000
 008880000008880000088000000880007777700070077777777777777777777777777777777777777777777777777777bbbb0000bbbbbbbbbbbbbbbbbbbbbbbb
 008888000088880000888800008888007777700770077777777777777777777777777777777777777777777777777777bbb000000bbbbbbbbbbbbbbbbbbbbbbb
 00cc88000088cc0000888800008cc8007777700000007777777777777777777777777777777777777777777777777777bbb00bb00bbbbbbbbbbbbbbbbbbbbbbb
@@ -418,14 +725,14 @@ __gfx__
 008888000088880000888800008888007777007777007777777777777777777777777777777777777777777777777777bbbbbbbb0000bbbbbbbbbbbbbbbbbbbb
 008888000088880000888800008888007777777777777777777777777777777777777777777777777777777777777777bbbbbbbb00000bbbbbbbbbbbbbbbbbbb
 000080000008080000008000000080007777777777777777777777777777777777777777777777777777777777777777bbbbbbbb00000bbbbbbbbbbbbbbbbbbb
-777777777777777777777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-777777777777777777777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
-777777777777777777777777777777777777777770007777777777777777777777777777777777777777770077777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
-777777777777777777777777777777777777777770007777777777700777777777000000077777777777770007777777bbbbbbbbbbbbbbbbbbb00bbbbbbbbbbb
-777777777777777777777000777777777777777770007777777770000077777777000000077777777777770007777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
-777777777777777777700000777777777777777770007777777700000077777777700077777777777777770000777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
-777777777777777777700000777777777777777700007777777700777777777777700777777000777777700000777777bbbbbbbbbbbbbbbb000bbbbbbbbbbbbb
-777777777777777777700007777777777777777700007777777700777777777777700777700000777777700000077777bbbbbbbbbbbbbbbb00bbbbbbbbbbbbbb
+001001000010010077777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+018118100161161077777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
+188877811666776177777777777777777777777770007777777777777777777777777777777777777777770077777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
+188887811616616177777777777777777777777770007777777777700777777777000000077777777777770007777777bbbbbbbbbbbbbbbbbbb00bbbbbbbbbbb
+188888811666666177777000777777777777777770007777777770000077777777000000077777777777770007777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
+018888100161161077700000777777777777777770007777777700000077777777700077777777777777770000777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
+001881000016610077700000777777777777777700007777777700777777777777700777777000777777700000777777bbbbbbbbbbbbbbbb000bbbbbbbbbbbbb
+000110000001100077700007777777777777777700007777777700777777777777700777700000777777700000077777bbbbbbbbbbbbbbbb00bbbbbbbbbbbbbb
 777777777777777777700007777777777777777000007777777700777777777777700777000077777777700070077777bbbbbbbbbbbbbbbbbbbb000bbbbbbbbb
 777777777777777777700077777777777777777007007777777700777777777777700777000000777777700070077777bbbbbbbbbbbbbbbbbbb0000bbbbbbbbb
 777777777777777777700077777777777777770007000777777700777777777777700777000000777777700070077777bbbbbbbbbbbbbbbbbbb0000bbbbbbbbb
@@ -442,14 +749,14 @@ __gfx__
 00eeee0000eeee008888888888888888888888888888888800000000000000000000000000000000000000003344443333b33b3b333b33333333333354545555
 00eeee0000eeee0088888888888888888888888888888888000000000000000000000000000000000000000033444433b33333b333333b333333333355445455
 00ee00000000ee0088888000000888888888888888888888000000000000000000000000000000000000000033444433333b333b333333333333333355555555
-000ee000000ee00088888000000088888888888888888888000000000000000000000000000000000000000033aaaa3355555555555555555555555535555553
-00eeee0000eeee008880000000008888888888888888888800000000000000000000500000000000000000003aaaaaa355555555555555555555555554454445
-00eeee0000ecce00888000000000888888888888888888880000000000000000005345000000000000000000aaaaaaaa35555553355555533555555354554445
-00eeee0000ecce00888000000008888888888888888888880000000000000000054553400000000000000000999aaaaa33555533335555333355553355544445
-00eeee0000eeee0088000888008888888888888888888888000000000000000005355400000000000000000099999aaa33333333333333333333333355444455
-00eeee0000eeee00800088880088888888888888888888880000000000000000044343500000000000000000999999aa33333333333333333333333354444545
-00eeee0000eeee0080088880008888888888888888888888000000000000000000344500000000000000000099999999b33333b333333b333333333355444445
-000e0000000e000080088800080008888888888888888888000000000000000000040000000000000000000039999993333b333b333333333333333355555555
+000ee000000ee00088888000000088888888888888888888000000000000000000000000000000001100101133aaaa3355555555555555555555555535555553
+00eeee0000eeee0088800000000088888888888888888888000000000000000000005000000000000022ee003aaaaaa355555555555555555555555554454445
+00eeee0000ecce008880000000008888888888888888888800000000000000000053450000000000122e2e21aaaaaaaa35555553355555533555555354554445
+00eeee0000ecce00888000000008888888888888888888880000000000000000054553400000000002e22220999aaaaa33555533335555333355553355544445
+00eeee0000eeee0088000888008888888888888888888888000000000000000005355400000000001ee2e2e199999aaa33333333333333333333333355444455
+00eeee0000eeee00800088880088888888888888888888880000000000000000044343500000000002e22e20999999aa33333333333333333333333354444545
+00eeee0000eeee008008888000888888888888888888888800000000000000000034450000000000102e220199999999b33333b333333b333333333355444445
+000e0000000e000080088800080008888888888888888888000000000000000000040000000000000101011039999993333b333b333333333333333355555555
 00000000000000008000000000000088888888888888888800000000000000000000000000000000000000000000000000000000000000000000000055555555
 00000000000000008800000800080000888888888888888800000000000000000000000000000000000000000000000000000000000000000000000055454445
 00000000000000008888888800888800088888888888888800000000000000000000000000000000000000000000000000000000000000000000000054444455
@@ -466,3 +773,6 @@ __gfx__
 0000000000000000888888888888888888880000088888880000000000000000000000000000000000000000000000003393333333338283333bb33355544455
 00000000000000008888888888888888888888888888888800000000000000000000000000000000000000000000000039a933b333333b33b33b333355445554
 00000000000000008888888888888888888888888888888800000000000000000000000000000000000000000000000033933333b3333333b333333b55555545
+__gff__
+0000000000000000000000008080808000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000000000001000001000000010000000000000000000000000000000100000000000000000000000000000001
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

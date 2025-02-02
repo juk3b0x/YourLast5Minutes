@@ -14,7 +14,6 @@ stats_active = false
 selected_option = 1
 lastCamX = 64
 lastCamY = 64
-timer = 5*60*30
 
 -------------Cartridge----------------
 function _init()
@@ -28,7 +27,8 @@ function _init()
     end
     for mob in all(mobs) do
         mob:spawn()
-    end 
+    end
+    createHearts()   
 end 
 
 function _update()
@@ -50,14 +50,8 @@ function _update()
             projectile:move()
         end
     end
-
-    if timer > 0 then
-        timer -= 1  -- Reduziert den Timer jede Frame
-    end
-    
     
     _draw()
-    
     
 end
 
@@ -75,9 +69,8 @@ function _draw()
             draw(projectile)
         end
     end
-    updateHearts()
-    local Ox, Oy = overlay(Player, 68, 2)
-    print("tIME lEFT: "..flr(timer / 30).."s", Ox, Oy , 7)
+    drawHearts()
+    spr(32, cam(Player))
 end
 
 -------------Projectiles--------------
@@ -143,9 +136,9 @@ end
 Player = {
     dmg = 10,
     aspeed = 1,
-    mspeed = 2,
-    range = 20,
-    hp = 60,
+    mspeed = 1,
+    range = 10,
+    hp = 100,
     gold = 100,
     posX = 0,
     posY = 0,
@@ -172,6 +165,50 @@ Player = {
     end
 }
 -----------------Mob-------------------
+Hearth = {}
+Hearth.__index = Hearth  -- Set metatable for Mob instances
+
+function Hearth:new()
+    local self = setmetatable({}, Hearth)  -- Create new instance
+    self.sprite = 32
+    self.spriteD = 33
+    self.posX = 0
+    self.posY = 0
+end
+
+function createHearts()
+    for i = 0, 4 do
+        add(i, Hearth:new())
+    end
+end
+
+function drawHearts()
+    local i = 1
+    for Hearth in all(Hearth) do
+        draw(Hearth.sprite, i, 1)
+        i += 1
+    end
+end
+
+function updateHearts()
+        if Player.hp < 20 then
+            Hearth[1].sprite = Hearth[1].spriteD
+        end
+        if Player.hp < 40 then
+            Hearth[2].sprite = Hearth[2].spriteD
+        end
+        if Player.hp < 60 then
+            Hearth[3].sprite = Hearth[3].spriteD
+        end
+        if Player.hp < 80 then
+            Hearth[4].sprite = Hearth[4].spriteD
+        end
+        if Player.hp < 100 then
+            Hearth[5].sprite = Hearth[5].spriteD
+        end
+end
+
+---------------------------------------
 Mob = {}
 Mob.__index = Mob  -- Set metatable for Mob instances
 
@@ -180,25 +217,20 @@ function Mob:new()
     self.dmg = 10
     self.mspeed = 1
     self.aspeed = 1
-    self.range = 300
+    self.range = 10
     self.hp = 100
     self.posX = 0
     self.posY = 0
     self.dirX = 1
     self.dirY = 0
     self.sprite = 64
-    self.spawnpoint = {0, 0}
-    -- Patrolpunkte (links/rechts oder oben/unten)
-    self.patrolPoint1 = {flr(rnd(128)*8), flr(rnd(64)*8)}
-    self.patrolPoint2 = {flr(rnd(128)*8), flr(rnd(64)*8)}
-    self.targetPoint = self.patrolPoint1  -- Startpunkt der Patrouille
-    
+    self.spawnpoint = {0,0}
     return self
 end
 
 function Mob:move()
+    move(self)
     projectileHit(self)
-    self:chase(Player)
 end
 
 function Mob:die()
@@ -206,48 +238,20 @@ function Mob:die()
 end
 
 function Mob:spawn()
-    self.spawnpoint[1] = flr(rnd(128*8))
-    self.spawnpoint[2] = flr(rnd(64*8))
+    self.spawnpoint[1] = flr(rnd(128))
+    self.spawnpoint[2] = flr(rnd(64))
     self.posX = self.spawnpoint[1]
     self.posY = self.spawnpoint[2]
 end
 
 function Mob:patrol()
-    local dx = self.targetPoint[1] - self.posX
-    local dy = self.targetPoint[2] - self.posY
-    
-    if abs(dx) > 1 then
-        MoveAndCollision(self, sgn(dx), 0)
-    end
-    
-    if abs(dy) > 1 then
-        MoveAndCollision(self, 0, sgn(dy))
-    end
-
-    if abs(dx) <= 1 and abs(dy) <= 1 then
-        if self.targetPoint == self.patrolPoint1 then
-            self.targetPoint = self.patrolPoint2
-        else
-            self.targetPoint = self.patrolPoint1
-        end
-    end
+    -- Patrol logic (between two points)
 end
 
-function Mob:chase(entity)
-    local dx = entity.posX - self.posX
-    local dy = entity.posY - self.posY
-    local distance = sqrt(dx * dx + dy * dy)
-
-    if timer % 120 > 30  then
-        if distance < self.range  then
-            MoveAndCollision(self, sgn(dx), sgn(dy))
-        else 
-             self:patrol() 
-         end
-    elseif timer % 120 < 30 then
-        self:patrol()
-    end
+function Mob:chase()
+    -- Chase player logic
 end
+
 
 
 ----------------Stats------------------
@@ -298,35 +302,6 @@ function menu_controls()
         Player.gold -= 1
     end
 end
-
-function updateHearts()
-    if Player.hp < 20 then
-        spr(33, overlay(Player,1 , 1))
-    else
-        spr(32, overlay(Player,1 , 1))
-    end
-    if Player.hp < 40 then
-        spr(33, overlay(Player,10 , 1))
-    else
-        spr(32, overlay(Player,10 , 1))
-    end
-    if Player.hp < 60 then
-        spr(33, overlay(Player,19 , 1))
-    else
-        spr(32, overlay(Player,19 , 1))
-    end
-    if Player.hp < 80 then
-        spr(33, overlay(Player,28 , 1))
-    else
-        spr(32, overlay(Player,28 , 1))
-    end
-    if Player.hp < 100 then
-        spr(33, overlay(Player,37 , 1))
-    else
-        spr(32, overlay(Player,37 , 1))
-    end
-end
-
 -----------------MAP-------------------
 function adjust_roughness(size)
     adj = 2
@@ -684,24 +659,7 @@ function cam(entity)
         y = 0
     end
     camera(x,y)
-end
-
-function overlay(entity,offsetX ,offsetY)
-    local x = entity.posX - 64
-    local y = entity.posY - 64 
-    if entity.posX/8 > m_size - 8 then
-        x = m_size * 7
-    end
-    if entity.posX/8 < 8 then
-        x = 0
-    end
-    if entity.posY/8 > m_size/2 - 8 then
-        y = m_size/2 * 6
-    end
-    if entity.posY/8 < 8 then
-        y = 0
-    end
-    return x + offsetX, y + offsetY
+    return x,y
 end
 
 ---------------------------------------
@@ -725,14 +683,14 @@ __gfx__
 008888000088880000888800008888007777007777007777777777777777777777777777777777777777777777777777bbbbbbbb0000bbbbbbbbbbbbbbbbbbbb
 008888000088880000888800008888007777777777777777777777777777777777777777777777777777777777777777bbbbbbbb00000bbbbbbbbbbbbbbbbbbb
 000080000008080000008000000080007777777777777777777777777777777777777777777777777777777777777777bbbbbbbb00000bbbbbbbbbbbbbbbbbbb
-001001000010010077777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-018118100161161077777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
-188877811666776177777777777777777777777770007777777777777777777777777777777777777777770077777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
-188887811616616177777777777777777777777770007777777777700777777777000000077777777777770007777777bbbbbbbbbbbbbbbbbbb00bbbbbbbbbbb
-188888811666666177777000777777777777777770007777777770000077777777000000077777777777770007777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
-018888100161161077700000777777777777777770007777777700000077777777700077777777777777770000777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
-001881000016610077700000777777777777777700007777777700777777777777700777777000777777700000777777bbbbbbbbbbbbbbbb000bbbbbbbbbbbbb
-000110000001100077700007777777777777777700007777777700777777777777700777700000777777700000077777bbbbbbbbbbbbbbbb00bbbbbbbbbbbbbb
+011001100880088077777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+118118118dd88dd877777777777777777777777777007777777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
+18988981811dd11877777777777777777777777770007777777777777777777777777777777777777777770077777777bbbbbbbbbbbbbbbbbbbbb00bbbbbbbbb
+18999981811dd11877777777777777777777777770007777777777700777777777000000077777777777770007777777bbbbbbbbbbbbbbbbbbb00bbbbbbbbbbb
+189999818d1dd1d877777000777777777777777770007777777770000077777777000000077777777777770007777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
+1189981108dddd8077700000777777777777777770007777777700000077777777700077777777777777770000777777bbbbbbbbbbbbbbbb00000bbbbbbbbbbb
+01188110008dd80077700000777777777777777700007777777700777777777777700777777000777777700000777777bbbbbbbbbbbbbbbb000bbbbbbbbbbbbb
+001111000008800077700007777777777777777700007777777700777777777777700777700000777777700000077777bbbbbbbbbbbbbbbb00bbbbbbbbbbbbbb
 777777777777777777700007777777777777777000007777777700777777777777700777000077777777700070077777bbbbbbbbbbbbbbbbbbbb000bbbbbbbbb
 777777777777777777700077777777777777777007007777777700777777777777700777000000777777700070077777bbbbbbbbbbbbbbbbbbb0000bbbbbbbbb
 777777777777777777700077777777777777770007000777777700777777777777700777000000777777700070077777bbbbbbbbbbbbbbbbbbb0000bbbbbbbbb
