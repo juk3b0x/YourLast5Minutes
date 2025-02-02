@@ -15,6 +15,8 @@ selected_option = 1
 lastCamX = 64
 lastCamY = 64
 timer = 5*60*30
+initialMobs = 10
+
 
 -------------Cartridge----------------
 function _init()
@@ -23,12 +25,7 @@ function _init()
     init_grid()
     create_map()
     set_map()
-    for i = 1, 30 do
-        add(mobs, Mob:new())
-    end
-    for mob in all(mobs) do
-        mob:spawn()
-    end 
+    spawnWave(initialMobs)
 end 
 
 function _update()
@@ -54,7 +51,7 @@ function _update()
     if timer > 0 then
         timer -= 1  -- Reduziert den Timer jede Frame
     end
-    
+    if timer % (30*60)  == 0 then spawnWave(initialMobs) end
     
     _draw()
     
@@ -187,7 +184,7 @@ function Mob:new()
     self.dirX = 1
     self.dirY = 0
     self.sprite = 64
-    self.spawnpoint = {0, 0}
+    self.spawnpoint = {-1, -1}
     -- Patrolpunkte (links/rechts oder oben/unten)
     self.patrolPoint1 = {flr(rnd(128)*8), flr(rnd(64)*8)}
     self.patrolPoint2 = {flr(rnd(128)*8), flr(rnd(64)*8)}
@@ -206,10 +203,12 @@ function Mob:die()
 end
 
 function Mob:spawn()
-    self.spawnpoint[1] = flr(rnd(128*8))
-    self.spawnpoint[2] = flr(rnd(64*8))
-    self.posX = self.spawnpoint[1]
-    self.posY = self.spawnpoint[2]
+    if self.spawnpoint[1] == -1 and self.spawnpoint[2] == -1 then
+        self.spawnpoint[1] = flr(rnd(128*8))
+        self.spawnpoint[2] = flr(rnd(64*8))
+        self.posX = self.spawnpoint[1]
+        self.posY = self.spawnpoint[2]
+    end
 end
 
 function Mob:patrol()
@@ -550,7 +549,15 @@ function MoveAndCollision(entity, moveX, moveY)
     end
 end
 
-
+----------------Utility------------------------------------
+function spawnWave(count)
+    for i = 1, count do
+        add(mobs, Mob:new())
+    end
+    for mob in all(mobs) do
+            mob:spawn()
+    end
+end
 function projectileHit(entity)
     if getmetatable(entity) == Player or getmetatable(entity) == Mob then
         for projectile in all(projectiles) do
