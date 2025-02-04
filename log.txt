@@ -13,7 +13,7 @@
 [000000]     08 blit_method 0  // 0 auto  1 software (slower but sometimes more reliable)  2 hardware (can do filtered scaling) 
 [000000]     09 foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to conserve battery power
 [000000]     10 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
-[000000]     11 sessions 500 // number of times program has been run
+[000000]     11 sessions 535 // number of times program has been run
 [000000]     12 rmb_key 0 // 0 for none  226 for LALT
 [000000]     13 desktop_path 
 [000000]     14 read_controllers_in_background 0
@@ -51,49 +51,53 @@
 [000000]     46 capture_timestamps 0
 [000000]   
 [000000]   codo_system_init
-[000235]   Compiled against SDL version: 2.0.2
-[000235]   Linked against SDL version:   2.0.9
-[000235]   Current video driver: windows
-[000235]   codo_reset_timer
-[000235]   codo_gui_init
-[000235]   codo_keys_init
-[000235]   codo_text_init
-[000235]   codo_video_init
-[000235]   codo_mouse_init
-[000235]   codo_joystick_init
-[000236]   Reading controller mappings: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/sdl_controllers.txt
-[000236]   searching for joysticks
-[000236]     found 0 joysticks
-[000236]   ok
-[000236] ok
-[000241] codo_load_pod: C:/Users/Tim/Downloads/pico-8_0.2.6b_windows/pico-8/pico8.dat ok 
-[000243] codo_set_screen 128 128 8 100
-[000243]  window size: 640 540
-[000391]   setting filter to nearest (screen_mode 0  back page width: 128)
+[000267]   Compiled against SDL version: 2.0.2
+[000267]   Linked against SDL version:   2.0.9
+[000267]   Current video driver: windows
+[000267]   codo_reset_timer
+[000267]   codo_gui_init
+[000267]   codo_keys_init
+[000267]   codo_text_init
+[000267]   codo_video_init
+[000267]   codo_mouse_init
+[000267]   codo_joystick_init
+[000268]   Reading controller mappings: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/sdl_controllers.txt
+[000268]   searching for joysticks
+[000268]     found 0 joysticks
+[000268]   ok
+[000268] ok
+[000272] codo_load_pod: C:/Users/Tim/Downloads/pico-8_0.2.6b_windows/pico-8/pico8.dat ok 
+[000274] codo_set_screen 128 128 8 100
+[000274]  window size: 640 540
+[000408]   setting filter to nearest (screen_mode 0  back page width: 128)
   renderer direct3d:
    flags: 0x0000000E ( |  | )
    texture formats (3): ARGB8888, YV12, IYUV
    max texture size: 16384x16384
-[000392]  desktop size: 2048 1152
-[000392] ok
-[000394] codo_sound_init mix_buffer_size: 1024
-[000394] codo_sound_init
-[000394] SDL_INIT_AUDIO ok
-[000408] SDL_OpenAudio ok
-[000408]  freq:22050
+[000410]  desktop size: 2048 1152
+[000410] ok
+[000411] codo_sound_init mix_buffer_size: 1024
+[000411] codo_sound_init
+[000411] SDL_INIT_AUDIO ok
+[000427] SDL_OpenAudio ok
+[000427]  freq:22050
  channels:1
-[000408] Built-in audio drivers: 0 wasapi 1 directsound 2 winmm 3 disk 4 dummy
-[000408] Current audio driver: wasapi
-[002084] loading c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
-[003761] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8 running_cart_lid: 
-[028222] window closed (14)
-[028222] codo_exit
-[028222]   cmusic_stop
-[028222]   codo_main_exit
-[028223]   codo_config_save
-[028224]   codo_sound_exit
-[028224]   codo_video_exit
-[028239]   codo_joystick_exit
-[028239]   codo_system_exit
-[028239]   codo_items_created: 1302
-[028239] ok
+[000427] Built-in audio drivers: 0 wasapi 1 directsound 2 winmm 3 disk 4 dummy
+[000427] Current audio driver: wasapi
+[002102] loading c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8
+[003778] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_cart_lid: 
+[005584] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_cart_lid: 
+[007420] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_cart_lid: 
+[009193] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_cart_lid: 
+[010966] run_cart current_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_filename: c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-10/yourlast5minutes.p8 running_cart_lid: 
+[013369] window closed (14)
+[013369] codo_exit
+[013369]   cmusic_stop
+[013369]   codo_main_exit
+[013370]   codo_config_save
+[013370]   codo_sound_exit
+[013370]   codo_video_exit
+[013389]   codo_joystick_exit
+[013389]   codo_system_exit
+[013389]   codo_items_created: 1302
+[013389] ok

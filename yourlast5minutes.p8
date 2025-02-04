@@ -16,6 +16,7 @@ selected_option = 1
 lastCamX = 64
 lastCamY = 64
 timer = 5*60*30
+initalTimeout = 5*30
 initialMobs = 10
 costMspeed = 5000
 costAspeed = 1000
@@ -23,15 +24,14 @@ costRange = 200
 costDamage = 200
 costHp = 200
 
-
 -------------Cartridge----------------
 function _init()
     init_grid()
     create_map()
-    set_map()
     Player:init()
     Portal:init()
     carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+    set_map()
 end
 
 function _update()
@@ -164,7 +164,8 @@ Player = {
 
     init = function(self)
         self.spawn_area = rnd({"tl","tr","bl","br"})
-        while spawnPointWall(Player) do
+        local zahler = 0
+        while spawnPointWall(Player) and zahler <= 1000 do
             if self.spawn_area == "tl" then
                 self.posX = flr(10+rnd(10)) *8
                 self.posY = flr(10+rnd(10)) *8
@@ -178,7 +179,9 @@ Player = {
                 self.posX = flr(107 + rnd(10)) * 8
                 self.posY = flr(43 + rnd(10)) * 8
             end
+            zahler += 1
         end
+        set_grid(self.posX/8, self.posY/8, 5)
     end,
 
     update = function(self)
@@ -600,7 +603,6 @@ function carve_path(originX, originY, destinationX, destinationY)
             -- If the tile is blocked, replace it
             if tile == 0 or tile == 4 then
                 set_grid(new_x, new_y, 3)
-                mset(new_x, new_y, rnd(non_blocking_tiles))
             end
 
             -- Move to the new position

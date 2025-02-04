@@ -16,6 +16,7 @@ selected_option = 1
 lastCamX = 64
 lastCamY = 64
 timer = 5*60*30
+initalTimeout = 5*30
 initialMobs = 10
 costMspeed = 5000
 costAspeed = 1000
@@ -23,15 +24,14 @@ costRange = 200
 costDamage = 200
 costHp = 200
 
-
 -------------Cartridge----------------
 function _init()
     init_grid()
     create_map()
-    set_map()
     Player:init()
-
-    --Portal:init()
+    Portal:init()
+    carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+    set_map()
 end
 
 function _update()
@@ -164,7 +164,8 @@ Player = {
 
     init = function(self)
         self.spawn_area = rnd({"tl","tr","bl","br"})
-        while spawnPointWall(Player) do
+        local zahler = 0
+        while spawnPointWall(Player) and zahler <= 1000 do
             if self.spawn_area == "tl" then
                 self.posX = flr(10+rnd(10)) *8
                 self.posY = flr(10+rnd(10)) *8
@@ -178,7 +179,9 @@ Player = {
                 self.posX = flr(107 + rnd(10)) * 8
                 self.posY = flr(43 + rnd(10)) * 8
             end
+            zahler += 1
         end
+        set_grid(self.posX/8, self.posY/8, 5)
     end,
 
     update = function(self)
@@ -578,17 +581,37 @@ end
 
 ----------------Utility------------------------------------
 function carve_path(originX, originY, destinationX, destinationY)
-    local directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
     local non_blocking_tiles = {76, 77, 78, 124, 125, 126}
+    originX, originY, destinationX, destinationY = flr(originX/8), flr(originY/8), flr(destinationX/8), flr(destinationY/8)
     while originX ~= destinationX or originY ~= destinationY do
-        local dir = rnd(directions)
-        local new_x, new_y = originX + dir[1], originY + dir[2]  -- Fix movement
+        local dx = destinationX - originX
+        local dy = destinationY - originY
+        local new_x, new_y
+
+        -- Move in the best direction first
+        if abs(dx) > abs(dy) then
+            new_x, new_y = originX + sgn(dx), originY  -- Horizontal move
+        else
+            new_x, new_y = originX, originY + sgn(dy)  -- Vertical move
+        end
+
+        -- Ensure we are making progress
         if is_within_bounds(new_x, new_y) then
+
             local tile = get_level(new_x, new_y)
+
+            -- If the tile is blocked, replace it
             if tile == 0 or tile == 4 then
-                mset(new_x, new_y, rnd(non_blocking_tiles))
+                set_grid(new_x, new_y, 3)
             end
+
+            -- Move to the new position
             originX, originY = new_x, new_y
+        end
+
+        -- Safety check: if the function stalls, break to avoid infinite loop
+        if (dx == 0 and dy == 0) then
+            break
         end
     end
 end
@@ -790,7 +813,6 @@ function spawnPointWall(e)
         return true
     end
 end
-
 ----------------Menue------------------
 
 
@@ -801,30 +823,22 @@ posY = 0,
 sprite = 70,
 
 init = function(self)
-    local xP = 0
-    local yP = 0
         if Player.spawn_area == "tl" then
-            xP = flr((64 + rnd(60))) *8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
         elseif Player.spawn_area == "tr" then
-            xP = flr((m_size - 1 - 64 - rnd(60))) *8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
         elseif Player.spawn_area == "bl" then
-            xP = flr((64 + rnd(60))) *8
-            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-        elseif Player.spawn_area == "tr" then
-            xP = flr((m_size - 1 - 64 - rnd(60))) *8
-            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-        else 
-            xP = 8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+        elseif Player.spawn_area == "br" then
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
     end
-    -- if spawnPointWall(xP, yP) then
-    --     self:init()
-    -- else
-        self.posX = xP
-        self.posY = yP
-    -- end
+    if spawnPointWall(self) then
+         self:init()
+    end
 end
 }
 
