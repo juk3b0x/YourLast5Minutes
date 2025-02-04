@@ -31,7 +31,7 @@ function _init()
     set_map()
     Player:init()
     Portal:init()
-    --carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+    carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
 end
 
 function _update()
@@ -578,40 +578,38 @@ end
 
 ----------------Utility------------------------------------
 function carve_path(originX, originY, destinationX, destinationY)
-    local directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
     local non_blocking_tiles = {76, 77, 78, 124, 125, 126}
-
+    originX, originY, destinationX, destinationY = flr(originX/8), flr(originY/8), flr(destinationX/8), flr(destinationY/8)
     while originX ~= destinationX or originY ~= destinationY do
         local dx = destinationX - originX
         local dy = destinationY - originY
-        local preferred_dir = {}
+        local new_x, new_y
 
-        -- Favor movement toward the destination
+        -- Move in the best direction first
         if abs(dx) > abs(dy) then
-            add(preferred_dir, {sgn(dx), 0})  -- Move horizontally first
-            add(preferred_dir, {0, sgn(dy)})  -- Move vertically as a backup
+            new_x, new_y = originX + sgn(dx), originY  -- Horizontal move
         else
-            add(preferred_dir, {0, sgn(dy)})  -- Move vertically first
-            add(preferred_dir, {sgn(dx), 0})  -- Move horizontally as a backup
+            new_x, new_y = originX, originY + sgn(dy)  -- Vertical move
         end
 
-        -- Introduce random deviation to prevent straight lines
-        --if rnd(1) < 0.1 then
-        --    add(preferred_dir, rnd(directions))  -- Occasionally take a random step
-        --end
+        -- Ensure we are making progress
+        if is_within_bounds(new_x, new_y) then
 
-        -- Select a valid movement direction
-        for dir in all(preferred_dir) do
-            local new_x, new_y = originX + dir[1], originY + dir[2]
-            if is_within_bounds(new_x, new_y) then
-                local tile = get_level(new_x, new_y)
-                if tile == 0 or tile == 4 then
-                    set_grid(new_x, new_y, 1)
-                    mset(new_x, new_y, rnd(non_blocking_tiles))
-                end
-            originX, originY = new_x, new_y
-            break  -- Move once, then continue loop
+            local tile = get_level(new_x, new_y)
+
+            -- If the tile is blocked, replace it
+            if tile == 0 or tile == 4 then
+                set_grid(new_x, new_y, 3)
+                mset(new_x, new_y, rnd(non_blocking_tiles))
             end
+
+            -- Move to the new position
+            originX, originY = new_x, new_y
+        end
+
+        -- Safety check: if the function stalls, break to avoid infinite loop
+        if (dx == 0 and dy == 0) then
+            break
         end
     end
 end
