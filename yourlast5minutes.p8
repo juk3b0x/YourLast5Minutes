@@ -30,7 +30,8 @@ function _init()
     init_grid()
     create_map()
     set_map()
-    Portal.init()
+
+    Portal:init()
 end
 
 function _update()
@@ -57,11 +58,11 @@ function _draw()
     if stats_active then
         draw_menu(Player.posX, Player.posY)
     else
-
         draw(Player)
         for mob in all(mobs) do
             draw(mob)
         end
+        draw(Portal)
         for projectile in all(projectiles) do
             draw(projectile)
         end
@@ -154,32 +155,28 @@ Player = {
     range = 200,
     hp = 100,
     gold = 100,
-    posX = 0,
-    posY = 0,
-    dirX = 0,
-    dirY = 0,
+    posX = 64,
+    posY = 64,
+    dirX = 1,
+    dirY = 1,
     sprite = 0,
-    spawn_area = "",
+    spawn_area = "tl",
 
     init = function(self)
         self.spawn_area = rnd({"tl","tr","bl","br"})
         if self.spawn_area == "tl" then
-            self.posX = rnd(10)
-            self.posY = rnd(10)
-        elseif spawn_area == "tr" then
-            self.posX = 117 + rnd(10)
-            self.posY = rnd(10)
-        elseif spawn_area == "bl" then
-            self.posX = rnd(10)
-            self.posY = 53 + rnd(10)
-        elseif spawn_area == "br" then
-            self.posX = 117 + rnd(10)
-            self.posY = 53 + rnd(10)
-        end
-
-        self.dirX = 1
-        self.dirY = 1
-        self.sprite = 64
+            self.posX = flr(10+rnd(10)) *8
+            self.posY = flr(10+rnd(10)) *8
+        elseif self.spawn_area == "tr" then
+            self.posX = flr(107 + rnd(10)) * 8
+           self.posY = flr(10 + rnd(10)) * 8
+        elseif self.spawn_area == "bl" then
+           self.posX = flr(10 + rnd(10)) * 8
+           self.posY = flr(43 + rnd(10)) * 8
+        elseif self.spawn_area == "br" then
+            self.posX = flr(107 + rnd(10)) * 8
+            self.posY = flr(43 + rnd(10)) * 8
+       end
     end,
 
     update = function(self)
@@ -688,9 +685,10 @@ end
 function draw(entity)
     if entity == Portal or entity == Boss then
         spr(entity.sprite, entity.posX, entity.posY, 2, 2)
-    end
+    else
     -- Zeichne den Spieler basierend auf der Blickrichtung
     spr(entity.sprite, entity.posX, entity.posY)
+    end
 end
 
 function despawn(entity)
@@ -783,21 +781,21 @@ end
 Portal = {
 posX = 0,
 posY = 0,
-sprite = {70},
+sprite = 70,
 
 init = function(self)
     if Player.spawn_area == "tl" then
-        self.posX = 64 + rnd(60)
-        self.posY = 32 + rnd(28)
+        self.posX = flr((64 + rnd(60))) *8
+        self.posY = flr((32 + rnd(28))) *8
     elseif Player.spawn_area == "tr" then
-        self.posX = m_size - 1 - 64 - rnd(60))
-        self.posY = 32 + rnd(28)
+        self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+        self.posY = flr((32 + rnd(28))) *8
     elseif Player.spawn_area == "bl" then
-        self.posX = 64 + rnd(60)
-        self.posY = ((m_size-1)/2) - 32 - rnd(28)
+        self.posX = flr((64 + rnd(60))) *8
+        self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
     elseif Player.spawn_area == "tr" then
-        self.posX = m_size - 1 - 64 - rnd(60))
-        self.posY = ((m_size-1)/2) - 32 - rnd(28)
+        self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+        self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
     end
 end
 }
