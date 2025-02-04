@@ -30,8 +30,8 @@ function _init()
     create_map()
     set_map()
     Player:init()
-
-    --Portal:init()
+    Portal:init()
+    --carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
 end
 
 function _update()
@@ -580,15 +580,38 @@ end
 function carve_path(originX, originY, destinationX, destinationY)
     local directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
     local non_blocking_tiles = {76, 77, 78, 124, 125, 126}
+
     while originX ~= destinationX or originY ~= destinationY do
-        local dir = rnd(directions)
-        local new_x, new_y = originX + dir[1], originY + dir[2]  -- Fix movement
-        if is_within_bounds(new_x, new_y) then
-            local tile = get_level(new_x, new_y)
-            if tile == 0 or tile == 4 then
-                mset(new_x, new_y, rnd(non_blocking_tiles))
-            end
+        local dx = destinationX - originX
+        local dy = destinationY - originY
+        local preferred_dir = {}
+
+        -- Favor movement toward the destination
+        if abs(dx) > abs(dy) then
+            add(preferred_dir, {sgn(dx), 0})  -- Move horizontally first
+            add(preferred_dir, {0, sgn(dy)})  -- Move vertically as a backup
+        else
+            add(preferred_dir, {0, sgn(dy)})  -- Move vertically first
+            add(preferred_dir, {sgn(dx), 0})  -- Move horizontally as a backup
+        end
+
+        -- Introduce random deviation to prevent straight lines
+        --if rnd(1) < 0.1 then
+        --    add(preferred_dir, rnd(directions))  -- Occasionally take a random step
+        --end
+
+        -- Select a valid movement direction
+        for dir in all(preferred_dir) do
+            local new_x, new_y = originX + dir[1], originY + dir[2]
+            if is_within_bounds(new_x, new_y) then
+                local tile = get_level(new_x, new_y)
+                if tile == 0 or tile == 4 then
+                    set_grid(new_x, new_y, 1)
+                    mset(new_x, new_y, rnd(non_blocking_tiles))
+                end
             originX, originY = new_x, new_y
+            break  -- Move once, then continue loop
+            end
         end
     end
 end
@@ -790,7 +813,6 @@ function spawnPointWall(e)
         return true
     end
 end
-
 ----------------Menue------------------
 
 
@@ -801,30 +823,22 @@ posY = 0,
 sprite = 70,
 
 init = function(self)
-    local xP = 0
-    local yP = 0
         if Player.spawn_area == "tl" then
-            xP = flr((64 + rnd(60))) *8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
         elseif Player.spawn_area == "tr" then
-            xP = flr((m_size - 1 - 64 - rnd(60))) *8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
         elseif Player.spawn_area == "bl" then
-            xP = flr((64 + rnd(60))) *8
-            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-        elseif Player.spawn_area == "tr" then
-            xP = flr((m_size - 1 - 64 - rnd(60))) *8
-            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-        else 
-            xP = 8
-            yP = flr((32 + rnd(28))) *8
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+        elseif Player.spawn_area == "br" then
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
     end
-    -- if spawnPointWall(xP, yP) then
-    --     self:init()
-    -- else
-        self.posX = xP
-        self.posY = yP
-    -- end
+    if spawnPointWall(self) then
+         self:init()
+    end
 end
 }
 
