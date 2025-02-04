@@ -10,6 +10,7 @@ roughness = flr(rnd(3)) -1
 grid = {}
 mobs = {}
 projectiles = {}
+frame_counters = {}
 stats_active = false
 selected_option = 1
 lastCamX = 64
@@ -26,12 +27,11 @@ costHp = 200
 -------------Cartridge----------------
 function _init()
     Player:init()
-    camera(Player.posX, Player.posY)
     init_grid()
     create_map()
     set_map()
-    spawnWave(initialMobs)
-end 
+
+end
 
 function _update()
     if btnp(5) then
@@ -39,28 +39,16 @@ function _update()
     end
     if stats_active then
         menu_controls()
-    
+
     else
         Player:update()
-        for mob in all(mobs) do
-            mob:move()
+        Projectile:update()
+        timeUpdate()
+        if #mobs <= 100 then
+            timeAktion(5, 1, function() spawnWave(initialMobs) end)
         end
-        for projectile in all(projectiles) do
-            if projectile.range <= 0 then
-                projectile:die()
-            else projectile.range -= 1 end
-            projectile:move()
-        end
+        Mob:update()
     end
-
-    if timer > 0 then
-        timer -= 1  -- Reduziert den Timer jede Frame
-    end
-    if timer % (30*60)  == 0 then spawnWave(initialMobs) end
-    
-    _draw()
-    
-    
 end
 
 function _draw()
@@ -69,6 +57,7 @@ function _draw()
     if stats_active then
         draw_menu(Player.posX, Player.posY)
     else
+
         draw(Player)
         for mob in all(mobs) do
             draw(mob)
@@ -89,8 +78,8 @@ Projectile.__index = Projectile  -- Set metatable for Projectile instances
 function Projectile:new(sender)
     local self = setmetatable({}, Projectile)  -- Create new instance
     self.dmg = sender.dmg
-    self.range = 10
-    self.mspeed = 0
+    self.range = 100
+    self.mspeed = 100
     self.posX = 0
     self.posY = 0
     self.dirX = 1
@@ -103,37 +92,51 @@ function Projectile:new(sender)
 end
 
 function Projectile:move()
-    move(self)
-    projectileHit(self)
+    MoveAndCollision(self, self.dirX, self.dirY)
 end
 
 function Projectile:die()
     despawn(self)
 end
 
+function Projectile:rangeUpdate()
+    if self.range <= 0 then
+        despawn(self)
+    else self.range -= 1 end
+end
+
+function Projectile:update()
+    for projectile in all(projectiles) do
+        projectile:rangeUpdate()
+            projectile:move()
+
+        projectileHit(projectile)
+    end
+end
+
 function Projectile:spawn(sender)
     self.mspeed = sender.aspeed
     if sender.sprite == 0 then
-        self.spawnpoint[1] = sender.posX - 8
+        self.spawnpoint[1] = sender.posX - 4
         self.spawnpoint[2] = sender.posY
         self.sprite = 12
         self.dirX = -1
         self.dirY = 0
     elseif sender.sprite == 1 then
-        self.spawnpoint[1] = sender.posX + 8
+        self.spawnpoint[1] = sender.posX + 4
         self.spawnpoint[2] = sender.posY
         self.sprite = 13
         self.dirX = 1
         self.dirY = 0
     elseif sender.sprite == 2 then
         self.spawnpoint[1] = sender.posX
-        self.spawnpoint[2] = sender.posY - 8
+        self.spawnpoint[2] = sender.posY - 4
         self.sprite = 14
         self.dirY = -1
         self.dirX = 0
     elseif sender.sprite == 3 then
         self.spawnpoint[1] = sender.posX
-        self.spawnpoint[2] = sender.posY + 8
+        self.spawnpoint[2] = sender.posY + 4
         self.sprite = 15
         self.dirY = 1
         self.dirX = 0
@@ -145,11 +148,12 @@ end
 ---------Player-----------------
 Player = {
     dmg = 10,
-    aspeed = 1,
-    mspeed = 2,
-    range = 20,
-    hp = 60,
-    gold = 0,
+    aspeed = 0.5,
+    mspeed = 20,
+    hspeed = 1,
+    range = 200,
+    hp = 100,
+    gold = 100,
     posX = 0,
     posY = 0,
     dirX = 0,
@@ -162,16 +166,13 @@ Player = {
         self.dirX = 1
         self.dirY = 1
         self.sprite = 64
-        camera(lastCamX, lastCamY)
     end,
 
     update = function(self)
-        move(self)
-        projectileHit(self)
-        attack(self)
+        timeAktionSpeed(self.mspeed,function() move(self) end)
+        timeAktionSpeed(self.aspeed,function() attack(self) end)
+        timeAktionSpeed(self.hspeed,function() projectileHit(self) end)
         cam(self)
-
-
     end
 }
 -----------------Mob-------------------
@@ -181,8 +182,8 @@ Mob.__index = Mob  -- Set metatable for Mob instances
 function Mob:new()
     local self = setmetatable({}, Mob)  -- Create new instance
     self.dmg = 10
-    self.mspeed = 1
-    self.aspeed = 1
+    self.mspeed = 10
+    self.aspeed = 0.5
     self.range = 300
     self.hp = 100
     self.posX = 0
@@ -191,22 +192,28 @@ function Mob:new()
     self.dirY = 0
     self.sprite = 64
     self.spawnpoint = {-1, -1}
-    -- Patrolpunkte (links/rechts oder oben/unten)
     self.patrolPoint1 = {flr(rnd(128)*8), flr(rnd(64)*8)}
     self.patrolPoint2 = {flr(rnd(128)*8), flr(rnd(64)*8)}
-    self.targetPoint = self.patrolPoint1  -- Startpunkt der Patrouille
-    
+    self.targetPoint = self.patrolPoint1
+    self.moveRand = rnd(15,30)
+    self.moveRand2 = rnd(90,120)
     return self
 end
 
-function Mob:move()
-    projectileHit(self)
-    self:chase(Player)
+
+function Mob:update()
+     for mob in all(mobs) do
+        timeAktionSpeed(mob.mspeed,function() mob:chase(Player) end)
+        projectileHit(mob)
+        timeAktionSpeed(mob.aspeed,function() meeleeAttack(mob) end)
+     end
 end
+
 
 function Mob:die()
     Player.gold += 10
     despawn(self)
+    Player.gold += 10
 end
 
 function Mob:spawn()
@@ -221,11 +228,11 @@ end
 function Mob:patrol()
     local dx = self.targetPoint[1] - self.posX
     local dy = self.targetPoint[2] - self.posY
-    
+
     if abs(dx) > 1 then
         MoveAndCollision(self, sgn(dx), 0)
     end
-    
+
     if abs(dy) > 1 then
         MoveAndCollision(self, 0, sgn(dy))
     end
@@ -247,8 +254,8 @@ function Mob:chase(entity)
     if timer % 120 > 30  then
         if distance < self.range  then
             MoveAndCollision(self, sgn(dx), sgn(dy))
-        else 
-             self:patrol() 
+        else
+             self:patrol()
          end
     elseif timer % 120 < 30 then
         self:patrol()
@@ -343,6 +350,7 @@ function adjust_roughness(size)
     if chance >= 0.75 then adj+=1 end
     return adj
 end
+
 function init_grid()
     for x = 1, m_size do
         local row = ""
@@ -417,7 +425,7 @@ function border(p)
             end
         end
     end
-    
+
 end
 function set_map()
     for x = 0, 127 do
@@ -444,7 +452,7 @@ function set_map()
                 col = set_shadow(x, y, 4, 2) --colors[3]
             elseif value >= 6 and value < 8 then
                 col = set_shadow(x, y, 4, 3) --colors[3]
-            else 
+            else
 
                 if get_grid_same_neighbors(x, y, get_level(x, y)) == 0 then
                     col = 4 --colors[4]
@@ -503,17 +511,17 @@ function get_level(x, y)
     if ((x+1) < 1 or (x+1) > (m_size-1) or (y+1) < 1 or (y+1) > ((m_size-1)/2)) then
         return 0
     end
-    local value = get_grid(x + 1, y + 1) 
+    local value = get_grid(x + 1, y + 1)
     if value < 2 then
-        return 0 
+        return 0
     elseif value >= 2 and value < 4 then
-        return 1 
+        return 1
     elseif value >= 4 and value < 6 then
-        return 2 
+        return 2
     elseif value >= 6 and value < 8 then
-        return 3 
+        return 3
     else
-        return 4 
+        return 4
     end
 end
 
@@ -521,50 +529,47 @@ end
 
 function MoveAndCollision(entity, moveX, moveY)
 
-    local pX = flr(entity.posX / 8)    
+    local pX = flr(entity.posX / 8)
     local pY = flr(entity.posY / 8)
     local gridX = pX + moveX
     local gridY = pY + moveY
-    moveWhile = entity.mspeed
-    
-    while(moveWhile > 0) do
 
-        pX = flr(entity.posX / 8)    
+
+        pX = flr(entity.posX / 8)
         pY = flr(entity.posY / 8)
         gridX = pX + moveX
         gridY = pY + moveY
 
-        if (entity.posX % 8 == 0 and 
-            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and 
+        if (entity.posX % 8 == 0 and
+            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and
             get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
             entity.posX % 8 != 0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
                 entity.posX = entity.posX + moveX
         end
 
-        pX = flr(entity.posX / 8) 
+        pX = flr(entity.posX / 8)
         gridX = pX + moveX
 
-        if (entity.posY % 8 == 0 and 
-            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and 
+        if (entity.posY % 8 == 0 and
+            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and
             get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
             entity.posY % 8 !=  0 or
             (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
                 entity.posY = entity.posY + moveY
         end
-        moveWhile -= 1
-    end
+
 end
 
 ----------------Utility------------------------------------
 function spawnWave(count)
     for i = 1, count do
-        add(mobs, Mob:new())
-    end
-    for mob in all(mobs) do
-            mob:spawn()
+        mob = Mob:new()
+        mob:spawn()
+        add(mobs, mob)
     end
 end
+
 function projectileHit(entity)
     for projectile in all(projectiles) do
         if flr(projectile.posX / 8) == flr(entity.posX / 8) and         //entity.x stimmt れもberein
@@ -602,8 +607,8 @@ function move(entity)
             entity.sprite = 3
             entity.dirY = 1
         end
-        
-    
+
+
     elseif getmetatable(entity) == Mob then
         entity.dirX = 0
         entity.dirY = 0
@@ -612,15 +617,15 @@ function move(entity)
         if rndbtn == 0 then
             entity.sprite = 64
             entity.dirX = -1
-                
+
         elseif rndbtn == 1 then
             entity.sprite = 65
             entity.dirX = 1
-                
+
         elseif rndbtn == 2 then
             entity.sprite = 80
             entity.dirY = -1
-               
+
         elseif rndbtn == 3 then
                 entity.sprite = 81
                 entity.dirY = 1
@@ -635,7 +640,7 @@ function move(entity)
         elseif entity.dirY == 1 then
             entity.sprite = 15
         end
-    end 
+    end
     MoveAndCollision(entity, entity.dirX, entity.dirY)
 end
 
@@ -650,14 +655,16 @@ function draw(entity)
     -- Zeichne den Spieler basierend auf der Blickrichtung
     spr(entity.sprite, entity.posX, entity.posY)
 end
+
 function despawn(entity)
     if getmetatable(entity) == Projectile then
-        del(projectiles, entity)  
+        del(projectiles, entity)
     end
     if getmetatable(entity) == Mob then
         del(mobs, entity)
     end
 end
+
 function receivedmg(entity,dmg)
     if entity == Player then
         entity.hp -= dmg
@@ -668,6 +675,73 @@ function receivedmg(entity,dmg)
         end
     end
 end
+
+function meeleeAttack(mob)
+        if flr(mob.posX / 8) == flr(Player.posX / 8) and
+            flr(mob.posY / 8) == flr(Player.posY / 8) then
+                receivedmg(Player, mob.dmg)
+
+
+        end
+end
+
+
+function frameAktion(id, fps)
+    if fps < 1 then fps = 1 end -- Verhindert Division durch 0
+    local interval = 30 / fps -- Berechnet, alle wie viele Frames die Aktion ausgefれもhrt wird
+
+    -- Initialisiere den Counter fれもr diese ID, falls nicht vorhanden
+    if not frame_counters[id] then
+        frame_counters[id] = 0
+    end
+
+    -- Counter hochzれさhlen und prれもfen
+    frame_counters[id] += 1
+    if frame_counters[id] >= interval then
+        frame_counters[id] = 0
+        return true
+    end
+    return false
+end
+
+function timeAktion(jedeXsekunde, anzahl, aktion)
+    if timer > 0 and timer != lastTimer then
+        if timer % (30 * jedeXsekunde) == 0 then
+            for i = 1, anzahl do
+                aktion()
+                lastTimer = timer
+            end
+        end
+    end
+end
+
+function timeAktionFrame(jedesXframe, anzahl, aktion)
+    if timer > 0 and timer then
+        if timer % jedesXframe < 1 then
+            for i = 1, anzahl do
+                aktion()
+            end
+        end
+    end
+end
+
+function timeAktionSpeed(speed, aktion)
+    g = 0
+    if speed >= 21 then g = 1 end
+    frames = 2 / ( g + ( (speed % 21) * 0.1))
+    timeAktionFrame(frames,1 + (speed/21), aktion)
+end
+
+
+function timeUpdate()
+    if timer > 0 then
+        timer -= 1  -- Reduziert den Timer jede Frame
+    end
+end
+
+----------------Menue------------------
+
+
 ----------------Portal-----------------
 
 
@@ -699,11 +773,12 @@ function cam(entity)
         y = 0
     end
     camera(x,y)
+
 end
 
 function overlay(entity,offsetX ,offsetY)
     local x = entity.posX - 64
-    local y = entity.posY - 64 
+    local y = entity.posY - 64
     if entity.posX/8 > m_size - 8 then
         x = m_size * 7
     end
@@ -717,6 +792,7 @@ function overlay(entity,offsetX ,offsetY)
         y = 0
     end
     return x + offsetX, y + offsetY
+
 end
 
 ---------------------------------------
