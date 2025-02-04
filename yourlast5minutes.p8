@@ -163,14 +163,14 @@ Player = {
     spawn_area = "tl",
 
     init = function(self)
-        self.spawn_area = rnd({"tl","tr","bl","br"})
         local zahler = 0
-        while spawnPointWall(Player) and zahler <= 1000 do
+        while spawnPointWall(Player) and zahler <= 100 do
+            self.spawn_area = rnd({"tl","tr","bl","br"})
             if self.spawn_area == "tl" then
                 self.posX = flr(10+rnd(10)) *8
                 self.posY = flr(10+rnd(10)) *8
             elseif self.spawn_area == "tr" then
-                self.posX = flr(107 + rnd(10)) * 8
+               self.posX = flr(107 + rnd(10)) * 8
                self.posY = flr(10 + rnd(10)) * 8
             elseif self.spawn_area == "bl" then
                self.posX = flr(10 + rnd(10)) * 8
@@ -181,7 +181,7 @@ Player = {
             end
             zahler += 1
         end
-        set_grid(self.posX/8, self.posY/8, 5)
+        set_grid((self.posX/8) +1, (self.posY/8) +1, 5 )
     end,
 
     update = function(self)
@@ -247,13 +247,10 @@ function Mob:patrol()
     local dx = self.targetPoint[1] - self.posX
     local dy = self.targetPoint[2] - self.posY
 
-    if abs(dx) > 1 then
-        MoveAndCollision(self, sgn(dx), 0)
-    end
-
-    if abs(dy) > 1 then
-        MoveAndCollision(self, 0, sgn(dy))
-    end
+    self.dirX = sgn(dx)
+    self.dirY = sgn(dy)
+    
+    move(self)
 
     if abs(dx) <= 1 and abs(dy) <= 1 then
         if self.targetPoint == self.patrolPoint1 then
@@ -268,10 +265,12 @@ function Mob:chase(entity)
     local dx = entity.posX - self.posX
     local dy = entity.posY - self.posY
     local distance = sqrt(dx * dx + dy * dy)
+    self.dirX = sgn(dx)
+    self.dirY = sgn(dy)
 
     if timer % 120 > 30  then
         if distance < self.range  then
-            MoveAndCollision(self, sgn(dx), sgn(dy))
+             move(self)
         else
              self:patrol()
          end
@@ -279,6 +278,7 @@ function Mob:chase(entity)
         self:patrol()
     end
 end
+
 
 
 ----------------Stats------------------
@@ -602,7 +602,7 @@ function carve_path(originX, originY, destinationX, destinationY)
 
             -- If the tile is blocked, replace it
             if tile == 0 or tile == 4 then
-                set_grid(new_x, new_y, 3)
+                set_grid(new_x +1, new_y +1, 3)
             end
 
             -- Move to the new position
@@ -666,28 +666,9 @@ function move(entity)
             entity.dirY = 1
         end
 
-
     elseif getmetatable(entity) == Mob then
-        entity.dirX = 0
-        entity.dirY = 0
-        btns = {0,1,2,3}
-        rndbtn = rnd(btns)
-        if rndbtn == 0 then
-            entity.sprite = 64
-            entity.dirX = -1
-
-        elseif rndbtn == 1 then
-            entity.sprite = 65
-            entity.dirX = 1
-
-        elseif rndbtn == 2 then
-            entity.sprite = 80
-            entity.dirY = -1
-
-        elseif rndbtn == 3 then
-                entity.sprite = 81
-                entity.dirY = 1
-        end
+        updateSprite(entity, entity.dirX, entity.dirY)
+        
     elseif getmetatable(entity) == Projectile then
         if entity.dirX == -1 then
             entity.sprite = 12
@@ -742,8 +723,6 @@ function meeleeAttack(mob)
         if flr(mob.posX / 8) == flr(Player.posX / 8) and
             flr(mob.posY / 8) == flr(Player.posY / 8) then
                 receivedmg(Player, mob.dmg)
-
-
         end
 end
 
@@ -805,14 +784,34 @@ function spawnPointWall(e)
     xp = flr(e.posX / 8)
     yp = flr(e.posY / 8)
 
-    if xp  == nil or yp == nil then
-        return true
-     elseif get_level(xp, yp) == 1   then
+    -- if xp  == nil or yp == nil then
+    --     return true
+    if get_level(xp, yp) == 1   then
          return false
     else
         return true
     end
 end
+
+function initPlayerField()
+    set_grid(Player.posX/8, Player.posY/8, 5)
+    mset(Player.posX/8, Player.posY/8, 77)
+end
+
+function updateSprite(entity, pX, pY)
+    if pY > 0 then
+        entity.sprite = 80
+    elseif pY <= 0 then
+        entity.sprite = 81
+    end
+
+    if pX > 0 then
+        entity.sprite = 65
+    elseif pX <= 0 then
+        entity.sprite = 64
+    end
+end
+
 ----------------Menue------------------
 
 
