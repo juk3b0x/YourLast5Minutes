@@ -1071,3 +1071,75 @@
  rrrrrrrrrrrrrrrr
 2025-02-02 05:54:42 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-5/yourlast5minutes.p8
  rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+2025-02-04 15:20:00 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ ri.........i
+2025-02-04 15:21:51 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ i.i.......ii......
+2025-02-04 15:22:49 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ 
+2025-02-04 15:23:09 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ ii........ir__r_rr_
+2025-02-04 15:23:43 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrr
+2025-02-04 15:24:22 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_
+2025-02-04 15:24:40 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r__r
+2025-02-04 15:27:22 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_rr
+2025-02-04 15:28:35 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrr
+2025-02-04 15:29:01 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rr
+2025-02-04 15:29:19 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrrrr
+2025-02-04 15:30:34 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r
+2025-02-04 15:30:51 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r
+2025-02-04 15:31:13 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r__r
+2025-02-04 15:33:20 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r_
+2025-02-04 15:34:17 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r
+2025-02-04 15:35:21 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r
+2025-02-04 15:36:42 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rr
+2025-02-04 15:37:03 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rr
+2025-02-04 15:37:29 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r___
+2025-02-04 15:39:36 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r_
+2025-02-04 15:40:24 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r
+2025-02-04 15:42:24 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_
+2025-02-04 15:43:38 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rr
+2025-02-04 15:45:27 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrrrrrr__rrrrrrrrrrrrrrrrrrrrr_rr_r
+2025-02-04 16:02:08 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r___
+2025-02-04 16:02:38 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrr
+2025-02-04 16:03:24 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_
+2025-02-04 16:03:54 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrr
+2025-02-04 16:08:39 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ r_r___r_
+2025-02-04 16:10:50 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ 
+2025-02-04 16:13:02 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ 
+2025-02-04 16:14:16 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrr
+2025-02-04 16:14:33 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrrr
+2025-02-04 16:14:59 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrrrrr
+2025-02-04 16:16:04 c:/Users/Tim/Desktop/Vs-Projekts/Pico8/YourLast5Minutes-9/yourlast5minutes.p8
+ rrrrrrrrr

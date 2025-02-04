@@ -26,12 +26,12 @@ costHp = 200
 
 -------------Cartridge----------------
 function _init()
-    Player:init()
     init_grid()
     create_map()
     set_map()
+    Player:init()
 
-    Portal:init()
+    --Portal:init()
 end
 
 function _update()
@@ -155,8 +155,8 @@ Player = {
     range = 200,
     hp = 100,
     gold = 100,
-    posX = 64,
-    posY = 64,
+    posX = 0,
+    posY = 0,
     dirX = 1,
     dirY = 1,
     sprite = 0,
@@ -164,19 +164,21 @@ Player = {
 
     init = function(self)
         self.spawn_area = rnd({"tl","tr","bl","br"})
-        if self.spawn_area == "tl" then
-            self.posX = flr(10+rnd(10)) *8
-            self.posY = flr(10+rnd(10)) *8
-        elseif self.spawn_area == "tr" then
-            self.posX = flr(107 + rnd(10)) * 8
-           self.posY = flr(10 + rnd(10)) * 8
-        elseif self.spawn_area == "bl" then
-           self.posX = flr(10 + rnd(10)) * 8
-           self.posY = flr(43 + rnd(10)) * 8
-        elseif self.spawn_area == "br" then
-            self.posX = flr(107 + rnd(10)) * 8
-            self.posY = flr(43 + rnd(10)) * 8
-       end
+        while spawnPointWall(Player) do
+            if self.spawn_area == "tl" then
+                self.posX = flr(10+rnd(10)) *8
+                self.posY = flr(10+rnd(10)) *8
+            elseif self.spawn_area == "tr" then
+                self.posX = flr(107 + rnd(10)) * 8
+               self.posY = flr(10 + rnd(10)) * 8
+            elseif self.spawn_area == "bl" then
+               self.posX = flr(10 + rnd(10)) * 8
+               self.posY = flr(43 + rnd(10)) * 8
+            elseif self.spawn_area == "br" then
+                self.posX = flr(107 + rnd(10)) * 8
+                self.posY = flr(43 + rnd(10)) * 8
+            end
+        end
     end,
 
     update = function(self)
@@ -229,10 +231,12 @@ end
 
 function Mob:spawn()
     if self.spawnpoint[1] == -1 and self.spawnpoint[2] == -1 then
-        self.spawnpoint[1] = flr(rnd(128*8))
-        self.spawnpoint[2] = flr(rnd(64*8))
-        self.posX = self.spawnpoint[1]
-        self.posY = self.spawnpoint[2]
+    while spawnPointWall(self) do
+            self.spawnpoint[1] = flr(rnd(128*8))
+            self.spawnpoint[2] = flr(rnd(64*8))
+            self.posX = self.spawnpoint[1]
+            self.posY = self.spawnpoint[2]
+    end
     end
 end
 
@@ -774,6 +778,19 @@ function timeUpdate()
     end
 end
 
+function spawnPointWall(e)
+    xp = flr(e.posX / 8)
+    yp = flr(e.posY / 8)
+
+    if xp  == nil or yp == nil then
+        return true
+     elseif get_level(xp, yp) == 1   then
+         return false
+    else
+        return true
+    end
+end
+
 ----------------Menue------------------
 
 
@@ -784,19 +801,30 @@ posY = 0,
 sprite = 70,
 
 init = function(self)
-    if Player.spawn_area == "tl" then
-        self.posX = flr((64 + rnd(60))) *8
-        self.posY = flr((32 + rnd(28))) *8
-    elseif Player.spawn_area == "tr" then
-        self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
-        self.posY = flr((32 + rnd(28))) *8
-    elseif Player.spawn_area == "bl" then
-        self.posX = flr((64 + rnd(60))) *8
-        self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-    elseif Player.spawn_area == "tr" then
-        self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
-        self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+    local xP = 0
+    local yP = 0
+        if Player.spawn_area == "tl" then
+            xP = flr((64 + rnd(60))) *8
+            yP = flr((32 + rnd(28))) *8
+        elseif Player.spawn_area == "tr" then
+            xP = flr((m_size - 1 - 64 - rnd(60))) *8
+            yP = flr((32 + rnd(28))) *8
+        elseif Player.spawn_area == "bl" then
+            xP = flr((64 + rnd(60))) *8
+            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+        elseif Player.spawn_area == "tr" then
+            xP = flr((m_size - 1 - 64 - rnd(60))) *8
+            yP = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+        else 
+            xP = 8
+            yP = flr((32 + rnd(28))) *8
     end
+    -- if spawnPointWall(xP, yP) then
+    --     self:init()
+    -- else
+        self.posX = xP
+        self.posY = yP
+    -- end
 end
 }
 
