@@ -30,7 +30,7 @@ function _init()
     init_grid()
     create_map()
     set_map()
-
+    Portal.init()
 end
 
 function _update()
@@ -159,10 +159,24 @@ Player = {
     dirX = 0,
     dirY = 0,
     sprite = 0,
+    spawn_area = "",
 
     init = function(self)
-        self.posX = 64
-        self.posY = 64
+        self.spawn_area = rnd({"tl","tr","bl","br"})
+        if self.spawn_area == "tl" then
+            self.posX = rnd(10)
+            self.posY = rnd(10)
+        elseif spawn_area == "tr" then
+            self.posX = 117 + rnd(10)
+            self.posY = rnd(10)
+        elseif spawn_area == "bl" then
+            self.posX = rnd(10)
+            self.posY = 53 + rnd(10)
+        elseif spawn_area == "br" then
+            self.posX = 117 + rnd(10)
+            self.posY = 53 + rnd(10)
+        end
+
         self.dirX = 1
         self.dirY = 1
         self.sprite = 64
@@ -562,6 +576,26 @@ function MoveAndCollision(entity, moveX, moveY)
 end
 
 ----------------Utility------------------------------------
+function carve_path(originX, originY, destinationX, destinationY)
+    local directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+    local non_blocking_tiles = {76, 77, 78, 124, 125, 126}
+    while originX ~= destinationX or originY ~= destinationY do
+        local dir = rnd(directions)
+        local new_x, new_y = originX + dir[1], originY + dir[2]  -- Fix movement
+        if is_within_bounds(new_x, new_y) then
+            local tile = get_level(new_x, new_y)
+            if tile == 0 or tile == 4 then
+                mset(new_x, new_y, rnd(non_blocking_tiles))
+            end
+            originX, originY = new_x, new_y
+        end
+    end
+end
+
+function is_within_bounds(x, y)
+    return x >= 0 and x < (m_size - 1) and y >= 0 and y < ((m_size-1)/2)
+end
+
 function spawnWave(count)
     for i = 1, count do
         mob = Mob:new()
@@ -652,6 +686,9 @@ function attack(sender)
     end
 end
 function draw(entity)
+    if entity == Portal or entity == Boss then
+        spr(entity.sprite, entity.posX, entity.posY, 2, 2)
+    end
     -- Zeichne den Spieler basierend auf der Blickrichtung
     spr(entity.sprite, entity.posX, entity.posY)
 end
@@ -743,7 +780,27 @@ end
 
 
 ----------------Portal-----------------
+Portal = {
+posX = 0,
+posY = 0,
+sprite = {70},
 
+init = function(self)
+    if Player.spawn_area == "tl" then
+        self.posX = 64 + rnd(60)
+        self.posY = 32 + rnd(28)
+    elseif Player.spawn_area == "tr" then
+        self.posX = m_size - 1 - 64 - rnd(60))
+        self.posY = 32 + rnd(28)
+    elseif Player.spawn_area == "bl" then
+        self.posX = 64 + rnd(60)
+        self.posY = ((m_size-1)/2) - 32 - rnd(28)
+    elseif Player.spawn_area == "tr" then
+        self.posX = m_size - 1 - 64 - rnd(60))
+        self.posY = ((m_size-1)/2) - 32 - rnd(28)
+    end
+end
+}
 
 
 
