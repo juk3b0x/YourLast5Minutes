@@ -5,26 +5,35 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
+-------------Map-Vars-----------------
 m_size = 129
 roughness = flr(rnd(3)) -1
 grid = {}
-mobs = {}
 projectiles = {}
-frame_counters = {}
 stats_active = false
 selected_option = 1
-lastCamX = 64
-lastCamY = 64
+frame_counters = {}
 timer = 5*60*30
 initalTimeout = 5*30
-initialMobs = 10
-costMspeed = 5000
-costAspeed = 1000
-costRange = 200
-costDamage = 200
-costHp = 200
+lastCamX = 64
+lastCamY = 64
 level = 0
+-------------Player-Vars--------------
+cost_mspeed = 250
+cost_aspeed = 200
+cost_range = 150
+cost_dmg = 150
+cost_hp = 100
 
+-------------Mob-Vars-----------------
+mobs = {}
+initialMobs     = 10
+m_b_dmg         = 8
+m_b_hp          = 20
+m_b_mspeed      = 16
+m_b_aspeed      = 1
+m_b_range       = 32
+m_level_modifier= 0.2
 -------------Cartridge----------------
 function _init()
     init_grid()
@@ -33,11 +42,14 @@ function _init()
     Portal:init()
     carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
     set_map()
-    level = 1
+
 end
 
 function _update()
     if stats_active then
+        Player.posX = 64 * 8
+        Player.posY = 64 * 8
+        cam(Player)
         menu_controls()
         if btnp(5) then
             old_player = Player
@@ -51,6 +63,7 @@ function _update()
             mobs = {}
             projectiles = {}
             level += 1
+            cost_update()
             timer = 5*60*30
         end
     else
@@ -69,7 +82,7 @@ function _draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
     if stats_active then
-        draw_menu(Player.posX, Player.posY)
+        draw_menu(Player.posX,Player.posY)
     else
         draw(Player)
         for mob in all(mobs) do
@@ -84,7 +97,7 @@ function _draw()
     local Ox, Oy = overlay(Player, 68, 2)
     print("tIME lEFT: "..flr(timer / 30).."s", Ox, Oy , 7)
     Ox, Oy = overlay(Player, 68,12)
-    print("lEVEL: "..level, Ox,Oy,7)
+    print("lEVEL: "..level+1, Ox,Oy,7)
 end
 
 -------------Projectiles--------------
@@ -217,12 +230,12 @@ Mob = {}
 Mob.__index = Mob  -- Set metatable for Mob instances
 
 function Mob:new()
-    local self = setmetatable({}, Mob)  -- Create new instance
-    self.dmg = 10
-    self.mspeed = 10
-    self.aspeed = 0.5
-    self.range = 300
-    self.hp = 100
+    local self  = setmetatable({}, Mob)  -- Create new instance
+    self.dmg    = m_b_dmg + (m_b_dmg * level * m_level_modifier)
+    self.mspeed = m_b_mspeed + (m_b_mspeed * level * m_level_modifier)
+    self.aspeed = m_b_aspeed + (m_b_aspeed * level * m_level_modifier)
+    self.range  = m_b_range + (m_b_range * level * m_level_modifier)
+    self.hp     = m_b_hp + (m_b_hp * level * m_level_modifier)
     self.posX = 0
     self.posY = 0
     self.dirX = 1
@@ -305,10 +318,10 @@ end
 ----------------Stats------------------
 function draw_menu(x_center, y_center)
     -- Solid menu background (covering 64x64 pixels)
-    x_start = x_center - 32
-    y_start = y_center - 32
-    x_end = x_center + 32
-    y_end = y_center + 32
+    x_start = x_center - 56
+    y_start = y_center - 104
+    x_end = x_center + 56
+    y_end = y_center - 16
     rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
     rect(x_start,y_start,x_end,y_end, 7) -- White border
 
@@ -316,38 +329,39 @@ function draw_menu(x_center, y_center)
     print("player stats", x_start + 5, y_start+2, 7)
 
     -- Stats list with click areas
-    print((selected_option == 1 and ">" or " ").." Healthpoints: "..Player.hp, x_start+2, y_start+10, 7)
-    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg, x_start+2, y_start+18, 7)
-    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed, x_start+2, y_start+26, 7)
-    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed, x_start+2, y_start+34, 7)
-    print((selected_option == 5 and ">" or " ").." Range: "..Player.range, x_start+2, y_start+42, 7)
+    print((selected_option == 1 and ">" or " ").." Healthpoints: "..flr(Player.hp).."("..cost_hp..")", x_start+2, y_start+10, 7)
+    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg.."("..cost_dmg..")", x_start+2, y_start+18, 7)
+    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed.."("..cost_aspeed..")", x_start+2, y_start+26, 7)
+    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed.."("..cost_mspeed..")", x_start+2, y_start+34, 7)
+    print((selected_option == 5 and ">" or " ").." Range: "..Player.range.."("..cost_range..")", x_start+2, y_start+42, 7)
 
     -- Points display
     print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
 end
 
 function menu_controls()
-    -- Get mouse input (stat(32) = X, stat(33) = Y, stat(34) = Left Click)
-    local mx, my, click = stat(32), stat(33), stat(34)
-
     -- Move selection up/down
     if btnp(2) then selected_option = max(1, selected_option - 1) end
     if btnp(3) then selected_option = min(5, selected_option + 1) end
 
     -- Increase stat if clicked or if "O" button (btn(4)) is pressed
     if (click == 1 or btnp(4)) and Player.gold > 0 then
-        if selected_option == 1 or (mx >= 38 and mx <= 90 and my >= 45 and my <= 53) then
-            Player.hp += 1
-        elseif selected_option == 2 or (mx >= 38 and mx <= 90 and my >= 55 and my <= 63) then
-            Player.dmg += 1
-        elseif selected_option == 3 or (mx >= 38 and mx <= 90 and my >= 65 and my <= 73) then
-            Player.aspeed += 1
-        elseif selected_option == 4 or (mx >= 38 and mx <= 90 and my >= 75 and my <= 83) then
-            Player.mspeed += 1
-        elseif selected_option == 5 or (mx >= 38 and mx <= 90 and my >= 85 and my <= 93) then
-            Player.range += 1
+        if selected_option == 1 and Player.gold >= cost_hp  then
+            Player.hp       += 1
+            Player.gold     -= cost_hp
+        elseif selected_option == 2 and Player.gold >= cost_dmg then
+            Player.dmg      += 1
+            Player.gold     -= cost_dmg
+        elseif selected_option == 3 and Player.gold >= cost_aspeed then
+            Player.aspeed   += 1
+            Player.gold     -= cost_aspeed
+        elseif selected_option == 4 and Player.gold >= cost_mspeed then
+            Player.mspeed   += 1
+            Player.gold     -= cost_mspeed
+        elseif selected_option == 5  then
+            Player.range    += 1
+            Player.gold     -= cost_range
         end
-        Player.gold -= 1
     end
 end
 
@@ -666,6 +680,12 @@ function enterPortal()
     portal_coords = {{flr(Portal.posX/8),flr(Portal.posY/8)}, {flr(Portal.posX/8) +1, flr(Portal.posY/8)}, {flr(Portal.posX/8), flr(Portal.posY/8) +1}, {flr(Portal.posX/8) +1, flr(Portal.posY/8) +1}}
     for coord in all(portal_coords) do
         if coord[1] == flr(Player.posX/8) and coord[2] == flr(Player.posY/8) then
+            for mob in all(mobs) do
+                despawn(mob)
+            end
+            for projectile in all(projectiles) do
+                despawn(projectile)
+            end
             stats_active = true
             return
         end
@@ -921,6 +941,13 @@ function overlay(entity,offsetX ,offsetY)
 
 end
 
+function cost_update()
+    cost_mspeed = flr(cost_mspeed + (cost_mspeed * level * 2 * m_level_modifier))
+    cost_aspeed = flr(cost_aspeed + (cost_aspeed * level * 2 * m_level_modifier))
+    cost_range = flr(cost_range + (cost_range * level * 2 * m_level_modifier))
+    cost_dmg = flr(cost_dmg + (cost_dmg * level * 2 * m_level_modifier))
+    cost_hp = flr(cost_hp + (cost_hp * level * 2 * m_level_modifier))
+end
 ---------------------------------------
 
 
