@@ -23,24 +23,36 @@ costAspeed = 1000
 costRange = 200
 costDamage = 200
 costHp = 200
+level = 0
 
 -------------Cartridge----------------
 function _init()
     init_grid()
     create_map()
-    Player:init()
+    Player:init(10,1,20,64,100,0)
     Portal:init()
     carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
     set_map()
+    level = 1
 end
 
 function _update()
-    if btnp(5) then
-        stats_active = not stats_active
-    end
     if stats_active then
         menu_controls()
-
+        if btnp(5) then
+            old_player = Player
+            stats_active = false
+            init_grid()
+            create_map()
+            Player:init(old_player.dmg,old_player.aspeed,old_player.mspeed, old_player.range, old_player.hp, old_player.gold)
+            Portal:init()
+            carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+            set_map()
+            mobs = {}
+            projectiles = {}
+            level += 1
+            timer = 5*60*30
+        end
     else
         Player:update()
         Projectile:update()
@@ -49,6 +61,7 @@ function _update()
             timeAktion(5, 1, function() spawnWave(initialMobs) end)
         end
         Mob:update()
+        enterPortal()
     end
 end
 
@@ -70,6 +83,8 @@ function _draw()
     updateHearts()
     local Ox, Oy = overlay(Player, 68, 2)
     print("tIME lEFT: "..flr(timer / 30).."s", Ox, Oy , 7)
+    Ox, Oy = overlay(Player, 68,12)
+    print("lEVEL: "..level, Ox,Oy,7)
 end
 
 -------------Projectiles--------------
@@ -149,10 +164,10 @@ end
 ---------Player-----------------
 Player = {
     dmg = 10,
-    aspeed = 0.5,
+    aspeed = 1,
     mspeed = 20,
     hspeed = 1,
-    range = 200,
+    range = 64,
     hp = 100,
     gold = 100,
     posX = 0,
@@ -162,7 +177,13 @@ Player = {
     sprite = 0,
     spawn_area = "tl",
 
-    init = function(self)
+    init = function(self, dmg,aspeed,mspeed,range,hp,gold)
+        self.dmg = dmg
+        self.aspeed = aspeed
+        self.mspeed = mspeed
+        self.range = range
+        self.hp = hp
+        self.gold = gold
         local zahler = 0
         while spawnPointWall(Player) and zahler <= 100 do
             self.spawn_area = rnd({"tl","tr","bl","br"})
@@ -641,6 +662,15 @@ function projectileHit(entity)
     end
 end
 
+function enterPortal()
+    portal_coords = {{flr(Portal.posX/8),flr(Portal.posY/8)}, {flr(Portal.posX/8) +1, flr(Portal.posY/8)}, {flr(Portal.posX/8), flr(Portal.posY/8) +1}, {flr(Portal.posX/8) +1, flr(Portal.posY/8) +1}}
+    for coord in all(portal_coords) do
+        if coord[1] == flr(Player.posX/8) and coord[2] == flr(Player.posY/8) then
+            stats_active = true
+            return
+        end
+    end
+end
 
 function move(entity)
     if entity == Player then
