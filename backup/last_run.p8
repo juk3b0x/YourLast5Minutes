@@ -5,50 +5,100 @@ __lua__
 --#include dsa.lua
 
 -------------Varaibles----------------
+-------------Map-Vars-----------------
 m_size = 129
 roughness = flr(rnd(3)) -1
 grid = {}
-mobs = {}
 projectiles = {}
-frame_counters = {}
 stats_active = false
 selected_option = 1
-lastCamX = 64
-lastCamY = 64
+frame_counters = {}
 timer = 5*60*30
 initalTimeout = 5*30
-initialMobs = 10
-costMspeed = 5000
-costAspeed = 1000
-costRange = 200
-costDamage = 200
-costHp = 200
-
+lastCamX = 64
+lastCamY = 64
+level = 0
+-------------Player-Vars--------------
+cost_mspeed = 250
+cost_aspeed = 200
+cost_range = 150
+cost_dmg = 150
+cost_hp = 100
+dead = 0
+-------------Mob-Vars-----------------
+mobs = {}
+initialMobs     = 10
+m_b_dmg         = 8
+m_b_hp          = 20
+m_b_mspeed      = 16
+m_b_aspeed      = 1
+m_b_range       = 32
+m_level_modifier= 0.2
+-------------Boss-Vars-----------------
+boss = {}
+b_b_dmg         = 25
+b_b_hp          = 1500
+b_b_mspeed      = 16
+b_b_aspeed      = 1
+b_b_range       = 32
+b_level_modifier= 0.1
+b0ss = {}
 -------------Cartridge----------------
 function _init()
     init_grid()
     create_map()
-    Player:init()
+    Player:init(10,1,20,250,100,0)
     Portal:init()
     carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+    b0ss = Boss:new()
+    b0ss:spawn()
+    add(boss,b0ss)
+    carve_path(b0ss.posX, b0ss.posY, Player.posX, Player.posY)
     set_map()
+    spawnWave(initialMobs)
 end
 
 function _update()
-    if btnp(5) then
-        stats_active = not stats_active
-    end
     if stats_active then
-        menu_controls()
-
+        Player.posX = 64 * 8
+        Player.posY = 64 * 8
+        cam(Player)
+        if dead == 0 then
+            menu_controls()
+        end
+        if dead == 0 and btnp(5) then
+            old_player = Player
+            stats_active = false
+            init_grid()
+            create_map()
+            Player:init(old_player.dmg,old_player.aspeed,old_player.mspeed, old_player.range, old_player.hp, old_player.gold)
+            Portal:init()
+            carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
+            set_map()
+            mobs = {}
+            projectiles = {}
+            boss = {}
+            b0ss = Boss:new()
+            b0ss:spawn()
+            add(boss,b0ss)
+            carve_path(b0ss.posX, b0ss.posY, Player.posX, Player.posY)
+            level += 1
+            cost_update()
+            initialMobs += 5
+            spawnWave(initialMobs)
+            timer = 5*60*30
+        end
     else
         Player:update()
         Projectile:update()
         timeUpdate()
+        
         if #mobs <= 100 then
-            timeAktion(5, 1, function() spawnWave(initialMobs) end)
+            timeAktion(30, 1, function() spawnWave(initialMobs) end)
         end
         Mob:update()
+        Boss:update()
+        enterPortal()
     end
 end
 
@@ -56,11 +106,14 @@ function _draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
     if stats_active then
-        draw_menu(Player.posX, Player.posY)
+        draw_menu(Player.posX,Player.posY)
     else
         draw(Player)
         for mob in all(mobs) do
             draw(mob)
+        end
+        for boss in all(boss) do
+            draw(boss)
         end
         draw(Portal)
         for projectile in all(projectiles) do
@@ -70,7 +123,28 @@ function _draw()
     updateHearts()
     local Ox, Oy = overlay(Player, 68, 2)
     print("tIME lEFT: "..flr(timer / 30).."s", Ox, Oy , 7)
+    Ox, Oy = overlay(Player, 68,12)
+    print("lEVEL: "..level+1, Ox,Oy,7)
 end
+
+-------------Baum---------------------
+Baum = {}
+Baum.__index = Baum  -- Set metatable for Baum instances
+
+function Baum:new()
+    local self = setmetatable({}, Baum)  -- Create new instance
+    self.posX = 0
+    self.posY = 0
+    self.sprite = 91
+    return self
+end
+
+function Baum:add(x, y)
+    self.posX = x
+    self.posY = y
+end
+
+
 
 -------------Projectiles--------------
 Projectile = {}
@@ -149,10 +223,10 @@ end
 ---------Player-----------------
 Player = {
     dmg = 10,
-    aspeed = 0.5,
+    aspeed = 1,
     mspeed = 20,
     hspeed = 1,
-    range = 200,
+    range = 64,
     hp = 100,
     gold = 100,
     posX = 0,
@@ -162,7 +236,13 @@ Player = {
     sprite = 0,
     spawn_area = "tl",
 
-    init = function(self)
+    init = function(self, dmg,aspeed,mspeed,range,hp,gold)
+        self.dmg = dmg
+        self.aspeed = aspeed
+        self.mspeed = mspeed
+        self.range = range
+        self.hp = hp
+        self.gold = gold
         local zahler = 0
         while spawnPointWall(Player) and zahler <= 100 do
             self.spawn_area = rnd({"tl","tr","bl","br"})
@@ -189,6 +269,10 @@ Player = {
         timeAktionSpeed(self.aspeed,function() attack(self) end)
         timeAktionSpeed(self.hspeed,function() projectileHit(self) end)
         cam(self)
+        if self.hp <= 0 then
+            dead = 1
+            stats_active = true
+        end
     end
 }
 -----------------Mob-------------------
@@ -196,12 +280,12 @@ Mob = {}
 Mob.__index = Mob  -- Set metatable for Mob instances
 
 function Mob:new()
-    local self = setmetatable({}, Mob)  -- Create new instance
-    self.dmg = 10
-    self.mspeed = 10
-    self.aspeed = 0.5
-    self.range = 300
-    self.hp = 100
+    local self  = setmetatable({}, Mob)  -- Create new instance
+    self.dmg    = m_b_dmg + (m_b_dmg * m_level_modifier)
+    self.mspeed = m_b_mspeed + (m_b_mspeed * m_level_modifier)
+    self.aspeed = m_b_aspeed + (m_b_aspeed * m_level_modifier)
+    self.range  = m_b_range + (m_b_range * m_level_modifier)
+    self.hp     = m_b_hp + (m_b_hp * m_level_modifier)
     self.posX = 0
     self.posY = 0
     self.dirX = 1
@@ -227,9 +311,8 @@ end
 
 
 function Mob:die()
-    Player.gold += 10
+    Player.gold += 50
     despawn(self)
-    Player.gold += 10
 end
 
 function Mob:spawn()
@@ -252,14 +335,6 @@ function Mob:patrol()
     
     move(self)
 
-    -- if abs(dx) > 1 then
-    --     move(self)
-    -- end
-
-    -- if abs(dy) > 1 then
-    --     move(self)
-    -- end
-
     if abs(dx) <= 1 and abs(dy) <= 1 then
         if self.targetPoint == self.patrolPoint1 then
             self.targetPoint = self.patrolPoint2
@@ -273,7 +348,101 @@ function Mob:chase(entity)
     local dx = entity.posX - self.posX
     local dy = entity.posY - self.posY
     local distance = sqrt(dx * dx + dy * dy)
-    --updateSprite(self, sgn(dx), sgn(dy))
+    self.dirX = sgn(dx)
+    self.dirY = sgn(dy)
+
+    if timer % 120 > 30  then
+        if distance < self.range  then
+             move(self)
+        else
+             self:patrol()
+         end
+    elseif timer % 120 < 30 then
+        self:patrol()
+    end
+end
+
+-----------------Boss-------------------
+Boss = {}
+Boss.__index = Boss  -- Set metatable for Mob instances
+
+function Boss:new()
+    local self = setmetatable({}, Boss)  -- Create new instance
+    self.dmg    = b_b_dmg + (b_b_dmg * b_level_modifier)
+    self.mspeed = b_b_mspeed + (b_b_mspeed * b_level_modifier)
+    self.aspeed = b_b_aspeed + (b_b_aspeed * b_level_modifier)
+    self.range  = b_b_range + (b_b_range * b_level_modifier)
+    self.hp     = b_b_hp + (b_b_hp * b_level_modifier)
+    self.posX = 0
+    self.posY = 0
+    self.dirX = 1
+    self.dirY = 0
+    self.sprite = 66
+    self.spawnpoint = {-1, -1}
+    self.patrolPoint1 = {flr(rnd(128)*8), flr(rnd(64)*8)}
+    self.patrolPoint2 = {flr(rnd(128)*8), flr(rnd(64)*8)}
+    self.targetPoint = self.patrolPoint1
+    self.moveRand = rnd(15,30)
+    self.moveRand2 = rnd(90,120)
+    return self
+end
+
+
+function Boss:update()
+     for b in all(boss) do
+        timeAktionSpeed(b.mspeed,function() b:chase(Player) end)
+        projectileHit(b)
+        timeAktionSpeed(b.aspeed,function() meeleeAttack(b) end)
+     end
+end
+
+
+function Boss:die()
+    Player.gold += 1500
+    despawn(self)
+end
+
+function Boss:spawn()
+    if Player.spawn_area == "tl" then
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
+        elseif Player.spawn_area == "tr" then
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((32 + rnd(28))) *8
+        elseif Player.spawn_area == "bl" then
+            self.posX = flr((64 + rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+        elseif Player.spawn_area == "br" then
+            self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
+            self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
+    end
+    if spawnPointWall(self) then
+         self:spawn()
+    end
+end
+
+function Boss:patrol()
+    local dx = self.targetPoint[1] - self.posX
+    local dy = self.targetPoint[2] - self.posY
+
+    self.dirX = sgn(dx)
+    self.dirY = sgn(dy)
+    
+    move(self)
+
+    if abs(dx) <= 1 and abs(dy) <= 1 then
+        if self.targetPoint == self.patrolPoint1 then
+            self.targetPoint = self.patrolPoint2
+        else
+            self.targetPoint = self.patrolPoint1
+        end
+    end
+end
+
+function Boss:chase(entity)
+    local dx = entity.posX - self.posX
+    local dy = entity.posY - self.posY
+    local distance = sqrt(dx * dx + dy * dy)
     self.dirX = sgn(dx)
     self.dirY = sgn(dy)
 
@@ -289,53 +458,66 @@ function Mob:chase(entity)
 end
 
 
-
 ----------------Stats------------------
 function draw_menu(x_center, y_center)
-    -- Solid menu background (covering 64x64 pixels)
-    x_start = x_center - 32
-    y_start = y_center - 32
-    x_end = x_center + 32
-    y_end = y_center + 32
-    rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
-    rect(x_start,y_start,x_end,y_end, 7) -- White border
+    if dead == 0 then
+        -- Solid menu background (covering 64x64 pixels)
+        x_start = x_center - 56
+        y_start = y_center - 104
+        x_end = x_center + 56
+        y_end = y_center - 16
+        rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+        rect(x_start,y_start,x_end,y_end, 7) -- White border
 
-    -- Menu title
-    print("player stats", x_start + 5, y_start+2, 7)
+        -- Menu title
+        print("player stats", x_start + 5, y_start+2, 7)
 
-    -- Stats list with click areas
-    print((selected_option == 1 and ">" or " ").." Healthpoints: "..Player.hp, x_start+2, y_start+10, 7)
-    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg, x_start+2, y_start+18, 7)
-    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed, x_start+2, y_start+26, 7)
-    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed, x_start+2, y_start+34, 7)
-    print((selected_option == 5 and ">" or " ").." Range: "..Player.range, x_start+2, y_start+42, 7)
+        -- Stats list with click areas
+        print((selected_option == 1 and ">" or " ").." Healthpoints: "..flr(Player.hp).."("..cost_hp..")", x_start+2, y_start+10, 7)
+        print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg.."("..cost_dmg..")", x_start+2, y_start+18, 7)
+        print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed.."("..cost_aspeed..")", x_start+2, y_start+26, 7)
+        print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed.."("..cost_mspeed..")", x_start+2, y_start+34, 7)
+        print((selected_option == 5 and ">" or " ").." Range: "..Player.range.."("..cost_range..")", x_start+2, y_start+42, 7)
 
-    -- Points display
-    print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+        -- Points display
+        print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+    else
+        -- Solid menu background (covering 64x64 pixels)
+        x_start = x_center - 56
+        y_start = y_center - 104
+        x_end = x_center + 56
+        y_end = y_center - 16
+        rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+        rect(x_start,y_start,x_end,y_end, 7) -- White border
+        print("gAME oVER", x_start + 32, y_start+2, 7)
+        print("yOU died at lEVEL: "..level+1, x_start+8, y_start+10, 7)
+        print("pRESS ctrl+r to restart", x_start+8, y_start+18, 7)
+    end
 end
 
 function menu_controls()
-    -- Get mouse input (stat(32) = X, stat(33) = Y, stat(34) = Left Click)
-    local mx, my, click = stat(32), stat(33), stat(34)
-
     -- Move selection up/down
     if btnp(2) then selected_option = max(1, selected_option - 1) end
     if btnp(3) then selected_option = min(5, selected_option + 1) end
 
     -- Increase stat if clicked or if "O" button (btn(4)) is pressed
-    if (click == 1 or btnp(4)) and Player.gold > 0 then
-        if selected_option == 1 or (mx >= 38 and mx <= 90 and my >= 45 and my <= 53) then
-            Player.hp += 1
-        elseif selected_option == 2 or (mx >= 38 and mx <= 90 and my >= 55 and my <= 63) then
-            Player.dmg += 1
-        elseif selected_option == 3 or (mx >= 38 and mx <= 90 and my >= 65 and my <= 73) then
-            Player.aspeed += 1
-        elseif selected_option == 4 or (mx >= 38 and mx <= 90 and my >= 75 and my <= 83) then
-            Player.mspeed += 1
-        elseif selected_option == 5 or (mx >= 38 and mx <= 90 and my >= 85 and my <= 93) then
-            Player.range += 1
+    if btnp(4) and Player.gold > 0 then
+        if selected_option == 1 and Player.gold >= cost_hp  then
+            Player.hp       += 1
+            Player.gold     -= cost_hp
+        elseif selected_option == 2 and Player.gold >= cost_dmg then
+            Player.dmg      += 1
+            Player.gold     -= cost_dmg
+        elseif selected_option == 3 and Player.gold >= cost_aspeed then
+            Player.aspeed   += 1
+            Player.gold     -= cost_aspeed
+        elseif selected_option == 4 and Player.gold >= cost_mspeed then
+            Player.mspeed   += 1
+            Player.gold     -= cost_mspeed
+        elseif selected_option == 5  then
+            Player.range    += 1
+            Player.gold     -= cost_range
         end
-        Player.gold -= 1
     end
 end
 
@@ -575,7 +757,7 @@ function MoveAndCollision(entity, moveX, moveY)
                 entity.posX = entity.posX + moveX
         end
 
-        pX = flr(entity.posX / 8)
+        pX = flr(entity.posX / 8 + 1)
         gridX = pX + moveX
 
         if (entity.posY % 8 == 0 and
@@ -586,6 +768,133 @@ function MoveAndCollision(entity, moveX, moveY)
                 entity.posY = entity.posY + moveY
         end
 
+end
+
+
+function MoveAndCollision(entity, moveX, moveY, size)
+
+    if size == nil then size = 1 end
+
+    local pX = flr(entity.posX / 8)
+    local pY = flr(entity.posY / 8)
+    local gridX = pX + moveX
+    local gridY = pY + moveY
+    local boolX = false
+    local boolY = false
+    local i = 0
+
+    while i <= size - 1 do
+         pX = flr(entity.posX / 8 + i)
+         pY = flr(entity.posY / 8 + i)
+         gridX = pX + moveX
+         gridY = pY + moveY
+
+        if (entity.posX % 8 == 0 and
+        get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and
+        get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
+        entity.posX % 8 != 0 or
+        (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+            boolX = true
+        else
+            boolX = false
+            break
+        end
+        if size != 0 then
+            pX = flr(entity.posX / 8)
+            pY = flr(entity.posY / 8 + i)
+            gridX = pX + moveX
+            gridY = pY + moveY
+
+            if (entity.posX % 8 == 0 and
+            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and
+            get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
+            entity.posX % 8 != 0 or
+            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+                boolX = true
+            else
+                boolX = false
+                break
+            end
+            pX = flr(entity.posX / 8 + i)
+            pY = flr(entity.posY / 8)
+            gridX = pX + moveX
+            gridY = pY + moveY
+
+            if (entity.posX % 8 == 0 and
+            get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4 and
+            get_level(gridX, pY + 1) > 0 and get_level(gridX, pY + 1) < 4) or
+            entity.posX % 8 != 0 or
+            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(gridX, pY) > 0 and get_level(gridX, pY) < 4) then
+                boolX = true
+            else
+                boolX = false
+                break
+            end
+        end
+        i += 1
+    end
+    
+    if boolX then
+        entity.posX = entity.posX + moveX
+    end
+        local i = 0
+
+    while i <= size - 1 do    
+        pX = flr(entity.posX / 8 + i)
+        pY = flr(entity.posY / 8)
+        gridX = pX + moveX
+        gridY = pY + moveY
+
+        if (entity.posY % 8 == 0 and
+            get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and
+            get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
+            entity.posY % 8 !=  0 or
+            (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                boolY = true
+            else
+                boolY = false
+                break
+        
+        end
+        if size != 0 then
+            pX = flr(entity.posX / 8)
+            pY = flr(entity.posY / 8 + i)
+            gridX = pX + moveX
+            gridY = pY + moveY
+
+            if (entity.posY % 8 == 0 and
+                get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and
+                get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
+                entity.posY % 8 !=  0 or
+                (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                    boolY = true
+                else
+                    boolY = false
+                    break
+            
+            end
+            pX = flr(entity.posX / 8 + i)
+            pY = flr(entity.posY / 8 + i)
+            gridX = pX + moveX
+            gridY = pY + moveY
+
+            if (entity.posY % 8 == 0 and
+                get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4 and
+                get_level(pX + 1, gridY) > 0 and get_level(pX + 1, gridY) < 4) or
+                entity.posY % 8 !=  0 or
+                (entity.posX % 8 == 0 and entity.posY % 8 == 0 and get_level(pX, gridY) > 0 and get_level(pX, gridY) < 4) then
+                    boolY = true
+                else
+                    boolY = false
+                    break
+            end
+        end
+        i += 1
+    end
+
+    if boolY then
+        entity.posY = entity.posY + moveY
+    end
 end
 
 ----------------Utility------------------------------------
@@ -637,6 +946,19 @@ function spawnWave(count)
     end
 end
 
+function spawnBoss()
+    b = Boss:new()
+    b:spawn()
+    add(boss, b)
+end
+
+function spawnBaum(x, y)
+    b = Baum:new(x, y)
+    add(Baum, b)
+end
+
+
+
 function projectileHit(entity)
     for projectile in all(projectiles) do
         if flr(projectile.posX / 8) == flr(entity.posX / 8) and         //entity.x stimmt れもberein
@@ -645,52 +967,98 @@ function projectileHit(entity)
             (entity == entity.sender) and not
             (getmetatable(entity) == Projectile) then                              //player kann nicht durch seine eigenen schれもsse verletzt werden
                 receivedmg(entity, projectile.dmg)
-                projectile.range = flr(projectile.range / 2)
+                if getmetatable(entity) == Boss then
+                    projectile.range = 0
+                else
+                    projectile.range = flr(projectile.range / 2)
+                end
+                
+        end
+        if getmetatable(entity) == Boss then
+           if (flr(projectile.posX / 8) == flr(entity.posX / 8) + 1) and (flr(projectile.posY / 8) == flr(entity.posY / 8))
+           or (flr(projectile.posX / 8) == flr(entity.posX / 8)) and (flr(projectile.posY / 8) == flr(entity.posY / 8) + 1)
+           or (flr(projectile.posX / 8)  == flr(entity.posX / 8) + 1) and (flr(projectile.posY / 8) == flr(entity.posY / 8) + 1) 
+           and not (getmetatable(entity) == getmetatable(entity.sender)) 
+           and not (entity == entity.sender) 
+           and not (getmetatable(entity) == Projectile) then
+            receivedmg(entity, projectile.dmg)
+            projectile.range = 0
+           end       
         end
     end
 end
 
+function enterPortal()
+    portal_coords = {{flr(Portal.posX/8),flr(Portal.posY/8)}, {flr(Portal.posX/8) +1, flr(Portal.posY/8)}, {flr(Portal.posX/8), flr(Portal.posY/8) +1}, {flr(Portal.posX/8) +1, flr(Portal.posY/8) +1}}
+    for coord in all(portal_coords) do
+        if coord[1] == flr(Player.posX/8) and coord[2] == flr(Player.posY/8) then
+            for mob in all(mobs) do
+                despawn(mob)
+            end
+            for projectile in all(projectiles) do
+                despawn(projectile)
+            end
+            stats_active = true
+            return
+        end
+    end
+end
 
 function move(entity)
-    if entity == Player then
-        entity.dirX = 0
-        entity.dirY = 0
-        if btn(0) then
-            entity.sprite = 0
-            entity.dirX = -1
+    local size = 1
+        if entity == Player then
+            entity.dirX = 0
+            entity.dirY = 0
+            if btn(0) then
+                entity.sprite = 0
+                entity.dirX = -1
+            end
+    
+            if btn(1) then
+                entity.sprite = 1
+                entity.dirX = 1
+            end
+    
+            if btn(2) then
+                entity.sprite = 2
+                entity.dirY = -1
+            end
+    
+            if btn(3) then
+                entity.sprite = 3
+                entity.dirY = 1
+            end
+    
+        elseif getmetatable(entity) == Mob then
+            updateSprite(entity, entity.dirX, entity.dirY)
+            
+        elseif getmetatable(entity) == Projectile then
+            if entity.dirX == -1 then
+                entity.sprite = 12
+            elseif entity.dirX == 1 then
+                entity.sprite = 13
+            elseif entity.dirY == -1 then
+                entity.sprite = 14
+            elseif entity.dirY == 1 then
+                entity.sprite = 15
+            end
+    
+        elseif getmetatable(entity) == Boss then
+            if entity.dirX == -1 then
+                entity.sprite = 66
+            elseif entity.dirX == 1 then
+                entity.sprite = 68
+            elseif entity.dirY == -1 then
+                entity.sprite = 98
+            elseif entity.dirY == 1 then
+                entity.sprite = 100
+            end
+            size = 2
         end
-
-        if btn(1) then
-            entity.sprite = 1
-            entity.dirX = 1
-        end
-
-        if btn(2) then
-            entity.sprite = 2
-            entity.dirY = -1
-        end
-
-        if btn(3) then
-            entity.sprite = 3
-            entity.dirY = 1
-        end
-
-    elseif getmetatable(entity) == Mob then
-        updateSprite(entity, entity.dirX, entity.dirY)
-        
-    elseif getmetatable(entity) == Projectile then
-        if entity.dirX == -1 then
-            entity.sprite = 12
-        elseif entity.dirX == 1 then
-            entity.sprite = 13
-        elseif entity.dirY == -1 then
-            entity.sprite = 14
-        elseif entity.dirY == 1 then
-            entity.sprite = 15
-        end
+    
+        MoveAndCollision(entity, entity.dirX, entity.dirY, size)
     end
-    MoveAndCollision(entity, entity.dirX, entity.dirY)
-end
+    
 
 function attack(sender)
     if sender == Player then
@@ -699,8 +1067,9 @@ function attack(sender)
         end
     end
 end
+
 function draw(entity)
-    if entity == Portal or entity == Boss then
+    if entity == Portal or getmetatable(entity) == Boss  then
         spr(entity.sprite, entity.posX, entity.posY, 2, 2)
     else
     -- Zeichne den Spieler basierend auf der Blickrichtung
@@ -715,16 +1084,15 @@ function despawn(entity)
     if getmetatable(entity) == Mob then
         del(mobs, entity)
     end
+    if getmetatable(entity) == Boss then
+        del(boss, entity)
+    end
 end
 
 function receivedmg(entity,dmg)
-    if entity == Player then
-        entity.hp -= dmg
-    else
-        entity.hp -= dmg
-        if entity.hp <= 0 then
-            entity:die()
-        end
+    entity.hp -= dmg
+    if entity ~= Player and entity.hp <= 0 then
+        entity:die()
     end
 end
 
@@ -843,7 +1211,7 @@ init = function(self)
         elseif Player.spawn_area == "br" then
             self.posX = flr((m_size - 1 - 64 - rnd(60))) *8
             self.posY = flr((((m_size-1)/2) - 32 - rnd(28))) *8
-    end
+        end
     if spawnPointWall(self) then
          self:init()
     end
@@ -900,6 +1268,13 @@ function overlay(entity,offsetX ,offsetY)
 
 end
 
+function cost_update()
+    cost_mspeed = flr(cost_mspeed + (cost_mspeed * 2 * m_level_modifier))
+    cost_aspeed = flr(cost_aspeed + (cost_aspeed * 2 * m_level_modifier))
+    cost_range = flr(cost_range + (cost_range * 2 * m_level_modifier))
+    cost_dmg = flr(cost_dmg + (cost_dmg * 2 * m_level_modifier))
+    cost_hp = flr(cost_hp + (cost_hp * 2 * m_level_modifier))
+end
 ---------------------------------------
 
 
@@ -937,38 +1312,38 @@ __gfx__
 777777777777777777700770007777777777700777700777777770007777777777700777770000777777777777777777bbbbbbbbbbbbbbbbbbb000bbb000bbbb
 777777777777777777777777007777777777000777777777777777000077777777700777777000777777777777777777bbbbbbbbbbbbbbbbbbb0000bb000bbbb
 777777777777777777777777777777777777007777777777777777700077777777777777777777777777777777777777bbbbbbbbbbbbbbbbbbbb0000bb000bbb
-00eee000000eee0033333333330000000000000333333333008040000004080000000000000000000000000033355533333b3b33b33333b33333333333555533
-00eeee0000eeee0033333333333000000000003333333333800004044040000800000000000000000000000033355533b333b3b33333333b3333333355554453
-00ccee0000eecc00333333333333000000000333333333330400004ee4000040000000000000000000000000333455333333b333333333333333333355445445
-00ccee0000eecc00ccccc3333333300000003333333ccccc040004eeee400040000000000000000000000000333445333b3b333b333333333333333355454445
-00eeee0000eeee00ccccc3333333330000033333333ccccc00404ee22ee4040000000000000000000000000033344433b333333333b3b3333333333354544455
-00eeee0000eeee00ccccc3333333333000333333333ccccc0004ee2222ee40000000000000000000000000003344443333b33b3b333b33333333333354545555
-00eeee0000eeee00ccccc3333333333003333333333ccccc4804e828828e408400000000000000000000000033444433b33333b333333b333333333355445455
-00ee00000000ee00333333333333333003333333333333334004e288882e400400000000000000000000000033444433333b333b333333333333333355555555
-000ee000000ee000333333333333333003333333333333330404e228822e404000000000000000001100101133aaaa3355555555555555555555555535555553
-00eeee0000eeee00333333333333333003333333333333330044e228822e440000005000000000000022ee003aaaaaa355555555555555555555555554454445
-00eeee0000ecce00333333333333333003333333333333330004e828828e40000053450000000000122e2e21aaaaaaaa35555553355555533555555354554445
-00eeee0000ecce00333333333333333003333333333333338004e282282e4008054553400000000002e22220999aaaaa33555533335555333355553355544445
-00eeee0000eeee0033333333333333300333333333333333004555555555540005355400000000001ee2e2e199999aaa33333333333333333333333355444455
-00eeee0000eeee00333333330000000000000000033333330499999999999940044343500000000002e22e20999999aa33333333333333333333333354444545
-00eeee0000eeee003333333300000000000000000333333345555555555555540034450000000000102e220199999999b33333b333333b333333333355444445
-000e0000000e000033333333000000000000000003333333499999999999999400040000000000000101011039999993333b333b333333333333333355555555
-00000000000000000000033333300000000003333330000000000000000000000000000000000000000000000000000000000000000000000000000055555555
-00000000000000000000333333330000000033333333000000000000000000000000000000000000000000000000000000000000000000000000000055454445
-00000000000000000003333333333000000333333333300000000000000000000000000000000000000000000000000000000000000000000000000054444455
-00000000000000000033333333333300003333cccc33330000000000000000000000000000000000000000000000000000000000000000000000000054444455
-0000000000000000033333333333333003333cccccc3333000000000000000000000000000000000000000000000000000000000000000000000000054554555
-0000000000000000033333333333333003333cccccc3333000000000000000000000000000000000000000000000000000000000000000000000000054445445
-0000000000000000033333333333333003333cccccc3333000000000000000000000000000000000000000000000000000000000000000000000000055444445
-0000000000000000033333333333333003333cccccc3333000000000000000000000000000000000000000000000000000000000000000000000000055555555
-00000000000000000333333333333330033333cccc33333000000000000000000000000000000000000000000000000033333393333333333333333355544555
-0000000000000000033333333333333003333333333333300000000000000000000000000000000000000000000000003b3b39a9333333b3332b333355445544
-00000000000000000333333333333330033333333333333000000000000000000000000000000000000000000000000033b33393383333333223b3b355555545
-0000000000000000033333333333333003333333333333300000000000000000000000000000000000000000000000003333333382b333333e33b33355555555
-00000000000000000333333333333330033333333333333000000000000000000000000000000000000000000000000033333333383338333333b33344555455
-0000000000000000000033330000000000003333000000000000000000000000000000000000000000000000000000003393333333338283333bb33355544455
-00000000000000000000333300000000000033330000000000000000000000000000000000000000000000000000000039a933b333333b33b33b333355445554
-00000000000000000000333300000000000033330000000000000000000000000000000000000000000000000000000033933333b3333333b333333b55555545
+008888000088880000000888888000000000088888800000008040000004080000000000000000000000000033355533333b3b33b33333b33333333333555533
+07e77880088777e000078777777880000008877787787000800004044040000800000000000000000000000033355533b333b3b33333333b3333333355554453
+7777e788887e7777007777777887880000887777ee7777000400004ee4000040000000000000000000000000333455333333b333333333333333333355445445
+6999777887779997077777ee8e7777800887777777777770040004eeee400040000000000000000000000000333445333b3b333b333333333333333355454445
+691997e88e799197077777e777777880088887777777777000404ee22ee4040000000000000000000000000033344433b333333333b3b3333333333354544455
+6911977886e91197778887777777888888878877777888770004ee2222ee40000000000000000000000000003344443333b33b3b333b33333333333354545555
+0699977006699970788888777777778888777e77778888874804e828828e408400000000000000000000000033444433b33333b333333b333333333355445455
+0066670000666700781778777777778888777777778177874004e288882e400400000000000000000000000033444433333b333b333333333333333355555555
+007777000088880078111887777ee888887777e7788111870404e228822e404000000000000000001100101133aaaa3355555555555555555555555535555553
+0e7887e0087e7780681111877777777888678e77781111870044e228822e440000005000000000000022ee003aaaaaa355555555555555555555555554454445
+7782287777799777668111887777778888668777881118770004e828828e40000053450000000000122e2e21aaaaaaaa35555553355555533555555354554445
+788e287e77999977068811887777778008688677881188708004e282282e4008054553400000000002e22220999aaaaa33555533335555333355553355544445
+778e888777900977066888886e7776800886666688888770004555555555540005355400000000001ee2e2e199999aaa33333333333333333333333355444455
+7ee8e87776900977006688866e866800008866e6688877000499999999999940044343500000000002e22e20999999aa33333333333333333333333354444545
+077e77e00669977000066666668e800000088ee66666700045555555555555540034450000000000102e220199999999b33333b333333b333333333355444445
+007777000066670000000666666000000000066666600000499999999999999400040000000000000101011039999993333b333b333333333333333355555555
+00000000000000000000077e77700000000008888880000000000000000000000000000000000000000000000000000000000000000000000000000055555555
+0000000000000000000e777ee87e70000008877e7778800000000000000000000000000000000000000000000000000000000000000000000000000055454445
+0000000000000000007ee888ee8877000087777e7777780000000000000000000000000000000000000000000000000000000000000000000000000054444455
+000000000000000007e7ee888e88877008e777777777778000000000000000000000000000000000000000000000000000000000000000000000000054444455
+000000000000000007788e8888e888700777778888777e7080000000000000000000000000000000000000000000000000000000000000000000000054554555
+0000000000000000e7888882228887ee7777788888877777e0000000000000000000000000000000000000000000000000000000000000000000000054445445
+0000000000000000ee88e22ee288eee777778877188877778e00000e000000000000000000000000000000000000000000000000000000000000000055444445
+0000000000000000668882ee22888877e77788771188777eeee0000e000000000000000000000000000000000000000000000000000000000000000055555555
+0000000000000000668882e22288887eee778811118877eeeeee00ee000000000000000000000000000000000000000033333393333333333333333355544555
+00000000000000006668882ee28eee776677881111887ee7e80eeee000000000000000000000000000000000000000003b3b39a9333333b3332b333355445544
+00000000000000006ee88888e888e777666688111188777780000000000000000000000000000000000000000000000033b33393383333333223b3b355555545
+000000000000000006668888ee87e77006668811118877700000000000000000000000000000000000000000000000003333333382b333333e33b33355555555
+0000000000000000066666ee8877ee70066668888887777000000000000000000000000000000000000000000000000033333333383338333333b33344555455
+00000000000000000066666777777e0000666688887777000000000000000000000000000000000000000000000000003393333333338283333bb33355544455
+000000000000000000066666e7777000000666666777700000000000000000000000000000000000000000000000000039a933b333333b33b33b333355445554
+000000000000000000000666e7700000000006666670000000000000000000000000000000000000000000000000000033933333b3333333b333333b55555545
 __gff__
 0000000000000000000000008080808000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000000000001000001000000010000000000000000000000000000000100000000000000000000000000000001
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

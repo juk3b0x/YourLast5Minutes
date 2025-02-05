@@ -127,25 +127,6 @@ function _draw()
     print("lEVEL: "..level+1, Ox,Oy,7)
 end
 
--------------Baum---------------------
-Baum = {}
-Baum.__index = Baum  -- Set metatable for Baum instances
-
-function Baum:new()
-    local self = setmetatable({}, Baum)  -- Create new instance
-    self.posX = 0
-    self.posY = 0
-    self.sprite = 91
-    return self
-end
-
-function Baum:add(x, y)
-    self.posX = x
-    self.posY = y
-end
-
-
-
 -------------Projectiles--------------
 Projectile = {}
 Projectile.__index = Projectile  -- Set metatable for Projectile instances
@@ -952,13 +933,6 @@ function spawnBoss()
     add(boss, b)
 end
 
-function spawnBaum(x, y)
-    b = Baum:new(x, y)
-    add(Baum, b)
-end
-
-
-
 function projectileHit(entity)
     for projectile in all(projectiles) do
         if flr(projectile.posX / 8) == flr(entity.posX / 8) and         //entity.x stimmt れもberein
@@ -1347,3 +1321,5 @@ __gfx__
 __gff__
 0000000000000000000000008080808000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000000000001000001000000010000000000000000000000000000000100000000000000000000000000000001
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+01130000210601b05016050080500305008050080500d05008050030501c050140501105000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
