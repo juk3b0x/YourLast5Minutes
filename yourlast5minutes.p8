@@ -50,8 +50,10 @@ function _update()
         Player.posX = 64 * 8
         Player.posY = 64 * 8
         cam(Player)
-        menu_controls()
-        if btnp(5) then
+        if dead == 0 then
+            menu_controls()
+        end
+        if dead == 0 and btnp(5) then
             old_player = Player
             stats_active = false
             init_grid()
@@ -223,6 +225,10 @@ Player = {
         timeAktionSpeed(self.aspeed,function() attack(self) end)
         timeAktionSpeed(self.hspeed,function() projectileHit(self) end)
         cam(self)
+        if self.hp <= 0 then
+            dead = 1
+            stats_active = true
+        end
     end
 }
 -----------------Mob-------------------
@@ -317,26 +323,39 @@ end
 
 ----------------Stats------------------
 function draw_menu(x_center, y_center)
-    -- Solid menu background (covering 64x64 pixels)
-    x_start = x_center - 56
-    y_start = y_center - 104
-    x_end = x_center + 56
-    y_end = y_center - 16
-    rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
-    rect(x_start,y_start,x_end,y_end, 7) -- White border
+    if dead == 0 then
+        -- Solid menu background (covering 64x64 pixels)
+        x_start = x_center - 56
+        y_start = y_center - 104
+        x_end = x_center + 56
+        y_end = y_center - 16
+        rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+        rect(x_start,y_start,x_end,y_end, 7) -- White border
 
-    -- Menu title
-    print("player stats", x_start + 5, y_start+2, 7)
+        -- Menu title
+        print("player stats", x_start + 5, y_start+2, 7)
 
-    -- Stats list with click areas
-    print((selected_option == 1 and ">" or " ").." Healthpoints: "..flr(Player.hp).."("..cost_hp..")", x_start+2, y_start+10, 7)
-    print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg.."("..cost_dmg..")", x_start+2, y_start+18, 7)
-    print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed.."("..cost_aspeed..")", x_start+2, y_start+26, 7)
-    print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed.."("..cost_mspeed..")", x_start+2, y_start+34, 7)
-    print((selected_option == 5 and ">" or " ").." Range: "..Player.range.."("..cost_range..")", x_start+2, y_start+42, 7)
+        -- Stats list with click areas
+        print((selected_option == 1 and ">" or " ").." Healthpoints: "..flr(Player.hp).."("..cost_hp..")", x_start+2, y_start+10, 7)
+        print((selected_option == 2 and ">" or " ").." Damage: "..Player.dmg.."("..cost_dmg..")", x_start+2, y_start+18, 7)
+        print((selected_option == 3 and ">" or " ").." Attack-Speed: "..Player.aspeed.."("..cost_aspeed..")", x_start+2, y_start+26, 7)
+        print((selected_option == 4 and ">" or " ").." Movement-Speed: "..Player.mspeed.."("..cost_mspeed..")", x_start+2, y_start+34, 7)
+        print((selected_option == 5 and ">" or " ").." Range: "..Player.range.."("..cost_range..")", x_start+2, y_start+42, 7)
 
-    -- Points display
-    print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+        -- Points display
+        print("Gold: "..Player.gold, x_start+5, y_start+50, 7)
+    else
+        -- Solid menu background (covering 64x64 pixels)
+        x_start = x_center - 56
+        y_start = y_center - 104
+        x_end = x_center + 56
+        y_end = y_center - 16
+        rectfill(x_start,y_start,x_end,y_end, 0) -- Black background
+        rect(x_start,y_start,x_end,y_end, 7) -- White border
+        print("gAME oVER", x_start + 32, y_start+2, 7)
+        print("yOU died at lEVEL: "..level+1, x_start+8, y_start+10, 7)
+        print("pRESS ctrl+r to restart", x_start+8, y_start+18, 7)
+    end
 end
 
 function menu_controls()
