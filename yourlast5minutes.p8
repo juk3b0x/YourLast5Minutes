@@ -10,6 +10,7 @@ m_size = 129
 roughness = flr(rnd(3)) -1
 grid = {}
 projectiles = {}
+baum = {}
 stats_active = false
 selected_option = 1
 frame_counters = {}
@@ -30,17 +31,17 @@ mobs = {}
 initialMobs     = 10
 m_b_dmg         = 8
 m_b_hp          = 20
-m_b_mspeed      = 16
+m_b_mspeed      = 8
 m_b_aspeed      = 1
-m_b_range       = 32
+m_b_range       = 60
 m_level_modifier= 0.2
 -------------Boss-Vars-----------------
 boss = {}
 b_b_dmg         = 25
-b_b_hp          = 1500
-b_b_mspeed      = 16
+b_b_hp          = 150
+b_b_mspeed      = 8
 b_b_aspeed      = 1
-b_b_range       = 32
+b_b_range       = 60
 b_level_modifier= 0.1
 b0ss = {}
 -------------Cartridge----------------
@@ -69,12 +70,12 @@ function _update()
         if dead == 0 and btnp(5) then
             old_player = Player
             stats_active = false
+            baum = {}
             init_grid()
             create_map()
             Player:init(old_player.dmg,old_player.aspeed,old_player.mspeed, old_player.range, old_player.hp, old_player.gold)
             Portal:init()
             carve_path(Portal.posX, Portal.posY, Player.posX, Player.posY)
-            set_map()
             mobs = {}
             projectiles = {}
             boss = {}
@@ -83,6 +84,7 @@ function _update()
             add(boss,b0ss)
             carve_path(b0ss.posX, b0ss.posY, Player.posX, Player.posY)
             level += 1
+            set_map()
             cost_update()
             initialMobs += 5
             spawnWave(initialMobs)
@@ -115,6 +117,10 @@ function _draw()
         for boss in all(boss) do
             draw(boss)
         end
+
+        for b in all(baum) do
+            draw(b)
+        end
         draw(Portal)
         for projectile in all(projectiles) do
             draw(projectile)
@@ -131,20 +137,19 @@ end
 Baum = {}
 Baum.__index = Baum  -- Set metatable for Baum instances
 
-function Baum:new()
+function Baum:new(x,y)
     local self = setmetatable({}, Baum)  -- Create new instance
-    self.posX = 0
-    self.posY = 0
+    self.posX = x
+    self.posY = y
     self.sprite = 91
     return self
 end
 
-function Baum:add(x, y)
-    self.posX = x
-    self.posY = y
+
+function addBaum(x, y)
+    local b = Baum:new(x*8,y*8)
+    add(baum, b)
 end
-
-
 
 -------------Projectiles--------------
 Projectile = {}
@@ -347,6 +352,9 @@ end
 function Mob:chase(entity)
     local dx = entity.posX - self.posX
     local dy = entity.posY - self.posY
+    -- if dx < 1 then dx = 0 end
+    -- if dy < 1 then dy = 0 end
+
     local distance = sqrt(dx * dx + dy * dy)
     self.dirX = sgn(dx)
     self.dirY = sgn(dy)
@@ -675,7 +683,8 @@ function set_map()
             end--colors[4]
         --draw_random_rotated_tile(col + 75, x * 8, y * 8)
             if col == 0 then
-                mset(x,y-1,16+75)
+                --mset(x,y-1,16+75)
+                addBaum(x, y - 1)
             end
             mset(x,y,col + 75)
         end
@@ -705,14 +714,6 @@ function set_shadow(x, y, value, col)
         shadow = col + 16
     end
     return shadow
-end
-
-function set_tree(x, y, value, col)
-    local tree = col
-    if get_level(x, y + 1) == value then
-        tree = col + 16
-    end
-    return tree
 end
 
 
@@ -952,10 +953,7 @@ function spawnBoss()
     add(boss, b)
 end
 
-function spawnBaum(x, y)
-    b = Baum:new(x, y)
-    add(Baum, b)
-end
+
 
 
 
@@ -997,6 +995,9 @@ function enterPortal()
             end
             for projectile in all(projectiles) do
                 despawn(projectile)
+            end
+            for b in all(baum) do
+                despawn(b)
             end
             stats_active = true
             return
@@ -1086,6 +1087,9 @@ function despawn(entity)
     end
     if getmetatable(entity) == Boss then
         del(boss, entity)
+    end
+    if getmetatable(entity) == Baum then
+        del(baum, entity)
     end
 end
 
